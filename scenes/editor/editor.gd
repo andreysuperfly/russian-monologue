@@ -32,10 +32,19 @@ func _ready() -> void:
 		if arg.ends_with(".mnlp") and FileAccess.file_exists(arg):
 			to_open = arg
 
+	# nothing asked for: carry on where you left off — the last project, at its last storyline
+	# (russian-monologue)
+	if to_open.is_empty():
+		var recent: PackedStringArray = ProjectManager.get_history()
+		if not recent.is_empty() and FileAccess.file_exists(recent[0]):
+			to_open = recent[0]
+
 	ProjectManager.load_project(MonologueProject.new())
 	# файл из командной строки (open -a Monologue --args путь.mnlp) — открыть сразу
 	if not to_open.is_empty():
 		EventBus.load_project.emit.call_deferred(to_open)
+	EventBus.request_storyline_inspection.connect(_remember_place)
+	ProjectManager.project_loaded.connect(_return_to_place)
 
 
 func _select_new_node() -> void:
@@ -296,3 +305,42 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == KEY_BRACKETRIGHT:
 			_walk_history(1)
 			get_viewport().set_input_as_handled()
+
+
+# ---------- where you were (russian-monologue) ----------
+
+const PLACE_PATH: String = "user://last_place.json"
+
+
+## Remembers, per project file, the storyline last looked at.
+func _remember_place(storyline: StorylineDocument) -> void:
+	var project: MonologueProject = ProjectManager.current_project
+	if project == null or project.project_path.is_empty() or storyline == null:
+		return
+	var places: Dictionary = _places()
+	places[project.project_path] = storyline.id
+	var file: FileAccess = FileAccess.open(PLACE_PATH, FileAccess.WRITE)
+	if file:
+		file.store_string(JSON.stringify(places))
+
+
+## On opening a project, goes back to the storyline it was left at.
+func _return_to_place() -> void:
+	var project: MonologueProject = ProjectManager.current_project
+	if project == null or project.project_path.is_empty():
+		return
+	var storyline: StorylineDocument = project.get_storyline(str(_places().get(project.project_path, "")))
+	if storyline == null:
+		return
+	# after the project list has opened its first storyline, which it does on load
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if ProjectManager.current_project == project:
+		EventBus.request_storyline_inspection.emit(storyline)
+
+
+func _places() -> Dictionary:
+	if not FileAccess.file_exists(PLACE_PATH):
+		return {}
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(PLACE_PATH))
+	return parsed if parsed is Dictionary else {}
