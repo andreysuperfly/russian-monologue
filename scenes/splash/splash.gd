@@ -11,19 +11,36 @@ func _ready() -> void:
 	_on_item_rect_changed()
 
 
+var _switching: bool = false
+
+
 func _process(_delta: float) -> void:
+	if _switching:
+		return
 	var status: ResourceLoader.ThreadLoadStatus = ResourceLoader.load_threaded_get_status(
 		load_scene
 	)
 
 	if status == ResourceLoader.ThreadLoadStatus.THREAD_LOAD_LOADED:
+		_switching = true
 		var scene: PackedScene = ResourceLoader.load_threaded_get(load_scene)
 		_switch_to_scene(scene)
+	elif status == ResourceLoader.ThreadLoadStatus.THREAD_LOAD_FAILED or status == ResourceLoader.ThreadLoadStatus.THREAD_LOAD_INVALID_RESOURCE:
+		# the threaded load gave up: load it the plain way rather than stay on the dino forever
+		_switching = true
+		_switch_to_scene(load(load_scene))
 
 
+## The blink is a nicety: if its end never comes, the editor opens anyway (russian-monologue —
+## the splash once stayed up for good).
 func _switch_to_scene(scene: PackedScene) -> void:
 	sprite.play("blink")
-	await sprite.animation_finished
+	var done: Array = []
+	sprite.animation_finished.connect(func() -> void: done.append(true), CONNECT_ONE_SHOT)
+	var waited: float = 0.0
+	while done.is_empty() and waited < 1.5:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
 
 	get_tree().change_scene_to_packed(scene)
 
