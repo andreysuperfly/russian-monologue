@@ -45,8 +45,14 @@ func _build_preview(_language: String = "") -> Control:
 	if target.is_empty():
 		return null
 
-	# "=" already is the assignment. The others are compounded onto one.
+	# a yes/no flag with words: «запомнить: дверь выбита» / «забыть: …» (russian-monologue)
 	var operator: String = str(get_property_value("operator"))
+	var said: String = NodePreview.human(ProjectManager.current_project, str(get_property_value("target")))
+	var value: Variant = get_property_value("value")
+	if not said.is_empty() and value is bool and operator == "=":
+		return NodePreview.line(NodePreview.plain("%s: %s" % [tr("remember") if value else tr("forget"), said]))
+
+	# "=" already is the assignment. The others are compounded onto one.
 	return NodePreview.line(NodePreview.plain("%s %s= %s" % [
 		target, "" if operator == "=" else operator,
 		NodePreview.literal(get_property_value("value"))

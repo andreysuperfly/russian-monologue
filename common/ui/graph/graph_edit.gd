@@ -979,7 +979,7 @@ func _add_jump_link(from_node: InspectableNode, from_property: String, to_node: 
 	# the scene's key, «end» for an end node, else the node's own label — never a bare id
 	var target: String = str(to_node.get_property_value("label"))
 	if to_node.get_type() == "genius_scene":
-		target = str(to_node.get_property_value("key"))
+		target = str(to_node.call("card_title")) if to_node.has_method("card_title") else str(to_node.get_property_value("key"))
 	elif to_node.get_type() == "end":
 		target = tr("End")
 	elif target.is_empty() or target == to_node.get_id():

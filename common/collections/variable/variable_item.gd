@@ -22,6 +22,11 @@ func initialize_properties() -> void:
 		.set_type("bool")
 		.tooltip("Kept between runs rather than reset when the story restarts."))
 
+	# what the flag means, in the writer's words: cards say this instead of the name (russian-monologue)
+	define_property(Property.new("human")
+		.label("In plain words")
+		.set_type("text"))
+
 	define_property(Property.new("extra/description")
 		.set_type("textarea"))
 

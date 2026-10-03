@@ -9,7 +9,7 @@ const PREVIEW_NAME: StringName = &"Preview"
 const PREVIEW_MAX_HEIGHT: float = 96.0
 ## How much of a list item's name a node shows. A node is a diagram of the story, not the
 ## story itself: past this the name is cut and the whole of it read in the inspector.
-const MAX_LIST_LABEL: int = 28
+const MAX_LIST_LABEL: int = 40
 ## How far a list item's type is faded behind the properties framing it.
 const LIST_LABEL_ALPHA: float = 0.5
 
@@ -72,6 +72,11 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 			var who: String = _speaker_name(node)
 			if not who.is_empty():
 				key_label.text = who
+		# a node can name its own card, as an episode does with its title
+		elif idx == 0 and node.has_method("card_title"):
+			var own: String = str(node.call("card_title"))
+			if not own.is_empty():
+				key_label.text = own
 
 		var value_label: Label = Label.new()
 		value_label.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -378,9 +383,12 @@ static func _item_label(
 	item_data: Dictionary, label_property: String, type_name: String, item_index: int
 ) -> String:
 	var project: MonologueProject = ProjectManager.current_project
-	var label: String = Util.to_label(
-		item_data.get(label_property), project.active_language_code if project else ""
-	)
+	var value: Variant = item_data.get(label_property)
+	# a condition reads as itself, «если: дверь выбита», not as its first field (russian-monologue)
+	if value is Dictionary and (value as Dictionary).has("checks"):
+		var test: String = NodePreview.condition(value, project)
+		return TranslationServer.translate("if: %s") % test if not test.is_empty() else TranslationServer.translate("if: —")
+	var label: String = Util.to_label(value, project.active_language_code if project else "")
 	if not label.is_empty():
 		return label
 	return "%s %d" % [tr_type(type_name), item_index + 1]

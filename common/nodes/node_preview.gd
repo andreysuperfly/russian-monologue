@@ -165,6 +165,16 @@ static func said(node: InspectableNode, property_name: String, language: String)
 
 
 ## A condition as it reads, such as "gold >= 3". Empty when it names no variable.
+## What a variable means in plain words, from its «In plain words» field; "" when it has none.
+static func human(project: MonologueProject, variable_id: String) -> String:
+	if project == null or variable_id.is_empty():
+		return ""
+	for record: Variant in project.get_collection_value("variables"):
+		if record is Dictionary and str((record as Dictionary).get("id", "")) == variable_id:
+			return str((record as Dictionary).get("human", "")).strip_edges()
+	return ""
+
+
 static func condition(test: Variant, in_project: MonologueProject = null) -> String:
 	var project: MonologueProject = in_project if in_project != null else ProjectManager.current_project
 	if project == null:
@@ -195,7 +205,13 @@ static func _check_phrase(project: MonologueProject, check: Dictionary) -> Strin
 				phrase += " %s %s" % [symbol(op), str(value)]
 		_:
 			var variable: String = ReferenceResolver.resolve_label(project, "variables", str(check.get("variable", "")))
-			phrase = "%s %s %s" % [trim(variable), symbol(str(check.get("operator", "=="))), literal(check.get("value"))]
+			var said: String = human(project, str(check.get("variable", "")))
+			var yes_no: Variant = check.get("value")
+			# «дверь выбита» / «НЕ дверь выбита» for a yes/no flag that has words (russian-monologue)
+			if not said.is_empty() and yes_no is bool and str(check.get("operator", "==")) in ["==", "="]:
+				phrase = said if yes_no else "%s %s" % [TranslationServer.translate("NOT"), said]
+			else:
+				phrase = "%s %s %s" % [trim(said if not said.is_empty() else variable), symbol(str(check.get("operator", "=="))), literal(check.get("value"))]
 	if check.get("not", false) == true:
 		phrase = "%s %s" % [TranslationServer.translate("NOT"), phrase]
 	return phrase
