@@ -9,6 +9,7 @@ enum MenuId {
 	REMOVE_ITEM = 5,
 }
 
+const FOLDER_ICON: Texture2D = preload("res://ui/assets/icons/folder.svg")
 const PLUS_ICON: Texture2D = preload("res://ui/assets/icons/plus.svg")
 
 var tree: Tree
@@ -123,6 +124,11 @@ func _build_folder_tree(parent_item: TreeItem, folder: Dictionary, project: Mono
 	folder_item.set_meta("folder_id", folder_id)
 	folder_item.set_meta("folder", folder)
 	folder_item.collapsed = not is_open
+	# a folder glyph exactly one step wide: the folder's name then starts where its contents do,
+	# so what lies in it reads straight under its name, not pushed further in
+	folder_item.set_icon(0, FOLDER_ICON)
+	folder_item.set_icon_max_width(0, maxi(8, tree.get_theme_constant("item_margin") - tree.get_theme_constant("h_separation")))
+	folder_item.set_icon_modulate(0, Color(1, 1, 1, 0.55))
 	folder_item.add_button(0, _small_plus(), 0, false, tr("New folder inside"))
 	folder_item.set_button_color(0, 0, Color(1, 1, 1, 0.45))
 
@@ -161,16 +167,16 @@ func _build_item_row(
 	var short_name: String = _storyline_short_name(storyline_name)
 	var label_text: String = ""
 	if kind == "storyline":
-		label_text = "↳ %s" % short_name
+		label_text = short_name
 	elif kind == "node":
 		var node_id: String = str(data.get("node", ""))
 		var node_lbl: String = _node_text(project, storyline_id, node_id)
-		label_text = "↳ %s › %s" % [short_name, node_lbl]
+		label_text = "%s › %s" % [short_name, node_lbl]
 	else:
-		label_text = "↳ %s" % short_name
+		label_text = short_name
 
 	item_node.set_text(0, label_text)
-	item_node.set_tooltip_text(0, storyline_name if kind == "storyline" else "%s › %s" % [storyline_name, label_text.trim_prefix("↳ ")])
+	item_node.set_tooltip_text(0, storyline_name if kind == "storyline" else "%s › %s" % [storyline_name, label_text])
 	item_node.set_custom_color(0, ThemeLayout.text_muted_color)
 
 
