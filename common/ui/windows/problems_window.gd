@@ -415,6 +415,7 @@ func _fill_usages() -> void:
 
 	var target: String = str(_usage_target.get_item_metadata(_usage_target.selected))
 	var sites: Array[ReferenceSite] = project.get_object_registry().get_referrers(target)
+	sites.append_array(_addon_sites(project, target))
 	if sites.is_empty():
 		_show_empty_usages(tr("Not used anywhere."))
 		return
@@ -643,6 +644,33 @@ func _where(project: MonologueProject, object_id: String, document_name: String)
 
 ## [storyline, node] holding [param object_id] — the node itself, or the node an embedded option
 ## belongs to. Empty when it is not on any graph.
+## Places an add-on's own fields name the record (a skill a choice needs, raises or spends),
+## which plain references do not see (russian-monologue).
+func _addon_sites(project: MonologueProject, target: String) -> Array[ReferenceSite]:
+	var found: Array[ReferenceSite] = []
+	var plugins: Array[MonologuePlugin] = MonologueRegistry.get_instance().get_installed_plugins()
+	if plugins.is_empty():
+		return found
+	var look: Callable = func(object: InspectableObject) -> void:
+		for plugin: MonologuePlugin in plugins:
+			var report: Dictionary = plugin.usage(object)
+			for kind: String in ["reads", "writes"]:
+				if str(target) in (report.get(kind, []) as Array).map(func(x: Variant) -> String: return str(x)):
+					var site: ReferenceSite = ReferenceSite.new()
+					site.owner_id = object.get_id() if object.has_method("get_id") else ""
+					site.target_id = target
+					site.property_name = "needs or checks" if kind == "reads" else "changes"
+					found.append(site)
+	for storyline: StorylineDocument in project.storylines:
+		for node: InspectableNode in storyline.nodes:
+			look.call(node)
+			for children: Variant in node.get_all_property_children():
+				for child: Variant in children:
+					if child is InspectableObject:
+						look.call(child)
+	return found
+
+
 func _find_node(project: MonologueProject, object_id: String) -> Array:
 	if object_id.is_empty():
 		return []
