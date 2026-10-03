@@ -525,6 +525,13 @@ Thank you very much for using Monologue!","[center][b]Russian Monologue[/b][/cen
 Нашли ошибку — напишите о ней на [url=https://github.com/andreysuperfly/russian-monologue/issues]GitHub[/url].
 
 Спасибо, что пользуетесь!"
+Card colour,Цвет карточки
+Branch colour,Цвет ветки
+No colour,Без цвета
+Orange,Оранжевый
+Teal,Бирюзовый
+Purple,Фиолетовый
+Pink,Розовый
 In plain words,по-человечески
 remember,запомнить
 forget,забыть

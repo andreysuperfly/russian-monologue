@@ -42,7 +42,8 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 	if title_bar:
 		title_bar.hide()
 
-	# the card's own colour, if one was picked: a band on top and a dot before the title
+	# the card's own colour, if one was picked: the whole card in a dark tone of it, so the light
+	# text stays readable whatever was picked, and a band of the colour itself on top
 	var tint_value: Variant = node.get_property_value("node_color")
 	var tint: Color = Color(str(tint_value)) if tint_value != null and str(tint_value) != "" else Color(0, 0, 0, 0)
 	for style_name: StringName in [&"panel", &"panel_selected"]:
@@ -51,8 +52,10 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 			var base: StyleBox = graph_node.get_theme_stylebox(style_name)
 			if base is StyleBoxFlat:
 				var tinted: StyleBoxFlat = base.duplicate()
-				tinted.border_color = tint
-				tinted.border_width_top = 3
+				tinted.bg_color = readable_fill(tint, (base as StyleBoxFlat).bg_color)
+				if style_name == &"panel":
+					tinted.border_color = tint
+				tinted.border_width_top = maxi(tinted.border_width_top, 3)
 				graph_node.add_theme_stylebox_override(style_name, tinted)
 
 	var rows: Array[GraphNodeRow] = _build_rows(node)
@@ -476,3 +479,14 @@ static func _is_filled(node: InspectableNode) -> bool:
 				if value != 0:
 					return true
 	return false
+
+
+## A colour turned into a card's background: same hue, toned down to a dark shade, so the
+## light text on it reads as well as on an uncoloured card.
+static func readable_fill(tint: Color, base: Color) -> Color:
+	var fill: Color = base.lerp(tint, 0.32)
+	var limit: float = maxf(base.get_luminance() + 0.1, 0.24)
+	while fill.get_luminance() > limit:
+		fill = fill.darkened(0.08)
+	fill.a = 1.0
+	return fill

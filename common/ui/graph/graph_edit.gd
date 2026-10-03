@@ -479,6 +479,12 @@ func get_property_name_at_port(node_name: String, port_index: int, is_output: bo
 func _on_end_node_move() -> void:
 	if _pending_positions.is_empty():
 		return
+	# moved by its text: now that it was really taken in hand, show its fields (russian-monologue)
+	pressed_on_text = false
+	var held: Array[InspectableObject] = []
+	held.assign(get_selected_nodes())
+	if not held.is_empty():
+		EventBus.request_objects_inspection.emit.call_deferred(held)
 
 	# One node let go on a wire joins the chain there, which a whole selection dropped at
 	# once would not say clearly enough.
@@ -773,6 +779,10 @@ func _offer_on_selection(at_position: Vector2) -> void:
 	menu.add_item("Extract into a Section", OFFER_EXTRACT)
 	menu.add_item("Remove, Keeping the Chain", OFFER_BRIDGE_OUT)
 	menu.add_item("Save as template…", OFFER_TEMPLATE)
+	# colour the card, or the whole branch that runs on from it (russian-monologue)
+	menu.add_separator()
+	menu.add_submenu_node_item(tr("Card colour"), _colour_menu(selection, false))
+	menu.add_submenu_node_item(tr("Branch colour"), _colour_menu(selection, true))
 	# into one of the writer's collections (russian-monologue)
 	var folders: Array = Bookmarks.folder_paths()
 	if not folders.is_empty():
@@ -1024,3 +1034,56 @@ func _use_scalable_font() -> void:
 	var scalable: Theme = Theme.new()
 	scalable.default_font = font
 	theme = scalable
+
+
+# ---------- colouring cards and branches (russian-monologue) ----------
+
+const CARD_COLOURS: Array = [
+	["Red", "#c0504d"], ["Orange", "#d9822b"], ["Yellow", "#c9b03a"], ["Green", "#5a9e4b"],
+	["Teal", "#3a9e9a"], ["Blue", "#4a78c2"], ["Purple", "#8a5cc2"], ["Pink", "#c25c95"],
+	["Grey", "#8a8a8a"],
+]
+
+
+func _colour_menu(selection: Array[InspectableNode], whole_branch: bool) -> PopupMenu:
+	var menu: PopupMenu = PopupMenu.new()
+	for index: int in CARD_COLOURS.size():
+		var swatch: Image = Image.create(14, 14, false, Image.FORMAT_RGBA8)
+		swatch.fill(Color(CARD_COLOURS[index][1]))
+		menu.add_icon_item(ImageTexture.create_from_image(swatch), tr(CARD_COLOURS[index][0]), index)
+	menu.add_separator()
+	menu.add_item(tr("No colour"), CARD_COLOURS.size())
+	menu.id_pressed.connect(func(id: int) -> void:
+		var colour: String = "#00000000" if id >= CARD_COLOURS.size() else str(CARD_COLOURS[id][1])
+		var targets: Array[InspectableNode] = _branch_of(selection) if whole_branch else selection
+		var history: CommandManager = get_storyline().history
+		var step: CommandTransaction = history.begin("Colour %d cards" % targets.size())
+		for node: InspectableNode in targets:
+			node.set_property_value("node_color", colour)
+		step.commit())
+	return menu
+
+
+## The cards that run on from these: everything after them that is reached only through them,
+## up to where the story joins something else (a card with a way in from outside).
+func _branch_of(start: Array[InspectableNode]) -> Array[InspectableNode]:
+	var storyline: StorylineDocument = get_storyline()
+	var inside: Dictionary = {}
+	for node: InspectableNode in start:
+		inside[node.get_id()] = node
+	var grew: bool = true
+	while grew:
+		grew = false
+		for c: NodeConnection in storyline.connections:
+			if not inside.has(c.from_node_id) or inside.has(c.to_node_id):
+				continue
+			var ways_in: Array = storyline.connections.filter(
+				func(k: NodeConnection) -> bool: return k.to_node_id == c.to_node_id)
+			if ways_in.all(func(k: NodeConnection) -> bool: return inside.has(k.from_node_id)):
+				var next: InspectableNode = storyline.get_node(c.to_node_id)
+				if next:
+					inside[next.get_id()] = next
+					grew = true
+	var found: Array[InspectableNode] = []
+	found.assign(inside.values())
+	return found
