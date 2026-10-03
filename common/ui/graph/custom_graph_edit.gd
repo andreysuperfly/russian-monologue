@@ -10,8 +10,13 @@ var connecting_mode: bool
 var mouse_hovering: bool = false
 
 
+var _wire_thickness: float = 0.0
+var _wire_zoom: float = -1.0
+
+
 func _ready() -> void:
 	_hide_default_scrollbars()
+	_wire_thickness = connection_lines_thickness
 
 	connection_drag_started.connect(_on_connection_drag_started)
 	connection_drag_ended.connect(_on_connection_drag_ended)
@@ -82,7 +87,10 @@ func _on_mouse_exited() -> void:
 func _get_connection_line(from_position: Vector2, to_position: Vector2) -> PackedVector2Array:
 	var raw_points: Array[Vector2] = []
 
-	if to_position.x >= from_position.x + 48.0:
+	# everything is in view pixels, so the margins follow the zoom; only a wire that really goes
+	# backwards takes the detour — a short forward one used to loop on itself
+	var step: float = 24.0 * zoom
+	if to_position.x > from_position.x + 2.0:
 		var mid_x: float = (from_position.x + to_position.x) * 0.5
 		raw_points = [
 			from_position,
@@ -93,13 +101,13 @@ func _get_connection_line(from_position: Vector2, to_position: Vector2) -> Packe
 	else:
 		var mid_y: float = (from_position.y + to_position.y) * 0.5
 		if is_equal_approx(from_position.y, to_position.y):
-			mid_y += 32.0
+			mid_y += 32.0 * zoom
 		raw_points = [
 			from_position,
-			Vector2(from_position.x + 24.0, from_position.y),
-			Vector2(from_position.x + 24.0, mid_y),
-			Vector2(to_position.x - 24.0, mid_y),
-			Vector2(to_position.x - 24.0, to_position.y),
+			Vector2(from_position.x + step, from_position.y),
+			Vector2(from_position.x + step, mid_y),
+			Vector2(to_position.x - step, mid_y),
+			Vector2(to_position.x - step, to_position.y),
 			to_position,
 		]
 
@@ -122,7 +130,7 @@ func _get_connection_line(from_position: Vector2, to_position: Vector2) -> Packe
 		return PackedVector2Array(filtered)
 
 	# Скругление углов: радиус 8px, аппроксимация дуги 3 точками
-	const CORNER_RADIUS: float = 8.0
+	var CORNER_RADIUS: float = 8.0 * zoom
 	var result: PackedVector2Array = PackedVector2Array()
 	result.append(filtered[0])
 
@@ -156,3 +164,12 @@ func _get_connection_line(from_position: Vector2, to_position: Vector2) -> Packe
 static func _append_wire_point(arr: PackedVector2Array, pt: Vector2) -> void:
 	if arr.is_empty() or not arr[arr.size() - 1].is_equal_approx(pt):
 		arr.append(pt)
+
+
+## Wires thin out with the zoom like everything else; Godot keeps their width in screen pixels,
+## so zoomed out they used to look fat (russian-monologue).
+func _process(_delta: float) -> void:
+	if is_equal_approx(zoom, _wire_zoom):
+		return
+	_wire_zoom = zoom
+	connection_lines_thickness = maxf(1.0, _wire_thickness * minf(zoom, 1.0))
