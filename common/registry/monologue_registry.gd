@@ -21,6 +21,9 @@ var _next_field_type_id: int = 1
 ## matches nothing else.
 var _reference_type_ids: Dictionary[String, int] = {}
 var _installing_plugin: String = ""
+## Fields an add-on puts on objects it did not define (russian-monologue): get_type() ->
+## [{"plugin": name, "add": Callable(object)}]. See [method extend].
+var _extensions: Dictionary[String, Array] = {}
 
 
 func _init() -> void:
@@ -81,6 +84,10 @@ func uninstall(plugin_name: String) -> void:
 
 	plugin.unregister(self)
 	_plugins.erase(plugin)
+	for object_type: String in _extensions.keys():
+		_extensions[object_type] = _extensions[object_type].filter(
+			func(extension: Dictionary) -> bool: return extension["plugin"] != plugin_name
+		)
 	for object_type: StringName in MonologueObjectType.ALL:
 		var bucket: Dictionary = _by_type[object_type]
 		for indexer_name: String in bucket.keys():
@@ -90,6 +97,24 @@ func uninstall(plugin_name: String) -> void:
 					_field_by_type_id.erase((indexer as FieldIndexer).type_id)
 				bucket.erase(indexer_name)
 	registry_changed.emit()
+
+
+## Lets an add-on give an existing kind of object more fields: [param add] is called with every
+## new object whose get_type() is [param object_type], after its own fields and before they are
+## sealed, and calls [code]define_property[/code] on it. So a game can put "tape" on the plain
+## sentence and keep every tool that understands sentences working (russian-monologue).
+func extend(object_type: String, add: Callable) -> void:
+	if not _extensions.has(object_type):
+		_extensions[object_type] = []
+	_extensions[object_type].append({"plugin": _installing_plugin, "add": add})
+
+
+## Called by every new object; adds whatever add-ons asked for its type.
+static func apply_extensions(object: InspectableObject) -> void:
+	if _instance == null or _instance._extensions.is_empty():
+		return
+	for extension: Dictionary in _instance._extensions.get(object.get_type(), []):
+		(extension["add"] as Callable).call(object)
 
 
 func get_installed_plugins() -> Array[MonologuePlugin]:

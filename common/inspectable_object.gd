@@ -17,6 +17,9 @@ var _parent_object: InspectableObject
 var _parent_property_name: String
 ## True once _init() has finished declaring. Later declarations freeze on the spot.
 var _is_sealed: bool = false
+## Values read from a file that no field of this object takes: an add-on's fields while that
+## add-on is not loaded. Written back untouched, so opening and saving never loses them.
+var _unknown: Dictionary = {}
 
 
 func get_parent_object() -> InspectableObject:
@@ -47,6 +50,7 @@ func _init(command_manager: CommandManager = null) -> void:
 		.unique_among_siblings())
 
 	initialize_properties()
+	MonologueRegistry.apply_extensions(self)
 	_seal_properties()
 
 
@@ -260,7 +264,8 @@ func _on_property_children_property_change(
 ## overrides go in one map beside them, so a saved value never shares its slot with editor
 ## bookkeeping.
 func _to_dict() -> Dictionary:
-	var dict: Dictionary = {TYPE_KEY: get_type()}
+	var dict: Dictionary = _unknown.duplicate(true)
+	dict[TYPE_KEY] = get_type()
 	var overrides: Dictionary = {}
 
 	for property: Property in get_properties():
@@ -281,6 +286,10 @@ func _from_dict(dict: Dictionary) -> void:
 		property._restore(
 			dict.get(property.name, property.get_value()), overrides.get(property.name, {})
 		)
+	_unknown.clear()
+	for key: Variant in dict:
+		if str(key) != TYPE_KEY and str(key) != EDITOR_SETTINGS_KEY and get_property(str(key)) == null:
+			_unknown[key] = dict[key]
 
 
 func get_settings() -> Dictionary:
