@@ -140,4 +140,7 @@ func _get_option_node_name(node: InspectableNode) -> String:
 	if not text.is_empty():
 		return text
 
-	return Util.to_label(node.get_property_value("label"), language)
+	# an option node's label defaults to its id, which means nothing to the reader; leave it to
+	# the graph to say "Option 3" instead (russian-monologue)
+	var label: String = Util.to_label(node.get_property_value("label"), language)
+	return "" if label == node.get_id() else label

@@ -325,7 +325,7 @@ static func _list_records(records: Array, label_property: String) -> Array[Dicti
 		var label: String = _read(record_dict, label_property)
 		if label.is_empty():
 			var type_name: String = str(record_dict.get("$type", "item"))
-			label = "%s %d" % [Util.to_readable_name(type_name), index + 1]
+			label = "%s %d" % [GraphNodeViewFactory.tr_type(type_name), index + 1]
 		candidates.append({"id": record_id, "label": label})
 	return candidates
 

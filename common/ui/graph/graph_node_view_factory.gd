@@ -277,7 +277,9 @@ static func _build_list_sub_rows(node: InspectableNode, prop: Property) -> Array
 		if ext_src_id.is_empty():
 			continue
 		if ext_name.is_empty():
-			ext_name = "%s %d" % [Util.to_readable_name(probe.get_type()), ext_index + 1]
+			# numbered on from the options the node holds itself
+			var held: int = (prop.get_value() as Array).size() if prop.get_value() is Array else 0
+			ext_name = "%s %d" % [tr_type(probe.get_type()), held + ext_index + 1]
 		var sub_label: String = "  %s" % _shorten(ext_name)
 		var sub_row: GraphNodeRow = GraphNodeRow.new(sub_label, "context", false, true)
 		sub_row.sub_property_id = "%s%s%s%s" % [
@@ -311,7 +313,15 @@ static func _item_label(
 	)
 	if not label.is_empty():
 		return label
-	return "%s %d" % [Util.to_readable_name(type_name), item_index + 1]
+	return "%s %d" % [tr_type(type_name), item_index + 1]
+
+
+## A type's readable name in the interface language, in the short form a numbered label wants
+## ("Option #" → "Вариант"), else the plain one.
+static func tr_type(type_name: String) -> String:
+	var readable: String = Util.to_readable_name(type_name)
+	var short: String = TranslationServer.translate(readable + " #")
+	return short if short != readable + " #" else TranslationServer.translate(readable)
 
 
 ## Returns the node's id, allocating one when it somehow has none.

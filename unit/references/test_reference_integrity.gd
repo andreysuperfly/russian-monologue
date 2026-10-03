@@ -251,7 +251,8 @@ func test_nothing_a_person_reads_is_an_id() -> void:
 	for candidate: Dictionary in nameless:
 		var label: String = str(candidate["label"])
 		assert_str(label).is_not_equal(str(candidate["id"]))
-		assert_bool(label.begins_with("Option ")).override_failure_message(
+		# "Option 1", or the same in the interface language ("Вариант 1")
+		assert_bool(label.begins_with(GraphNodeViewFactory.tr_type("option") + " ")).override_failure_message(
 			"A nameless option is labelled '%s'." % label
 		).is_true()
 

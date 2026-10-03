@@ -81,6 +81,7 @@ T = {
 "Load":"Загрузить","Don't load":"Не загружать","Add-ons not loaded: %s":"Дополнения не загружены: %s","Add-on loaded: %s":"Дополнение загружено: %s",
 "Ui Scale":"Размер интерфейса","Size of all text and controls. Also View → Bigger / Smaller, ⌘+ and ⌘−.":"Размер всего текста и кнопок. Ещё: Вид → Крупнее / Мельче, ⌘+ и ⌘−.",
 "Bigger":"Крупнее","Smaller":"Мельче","Actual Size":"Обычный размер","+ Add language…":"+ Добавить язык…",
+"Option #":"Вариант","Portrait #":"Портрет","Language #":"Язык","Item #":"Предмет","Character #":"Персонаж","Variable #":"Переменная","Exit #":"Выход",
 # --- разделы проекта ---
 "Storyline":"Сюжетная линия","Storylines":"Сюжетные линии","Characters":"Персонажи","Character":"Персонаж","Locations":"Места","Location":"Место",
 "Variables":"Переменные","Variable":"Переменная","Items":"Предметы","Inventory":"Инвентарь","Collections":"Коллекции","Collection":"Коллекция",
