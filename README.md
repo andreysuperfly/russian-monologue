@@ -1,5 +1,8 @@
 # russian-monologue
 
+**Авторам:** как писать диалоги в Russian Monologue — [АВТОРАМ.md](АВТОРАМ.md).
+
+
 Форк [Monologue](https://github.com/monologue-tool/monologue) — редактора ветвящихся диалогов на Godot — с русским интерфейсом и удобствами для больших сценариев.
 *A fork of [Monologue](https://github.com/monologue-tool/monologue), the Godot branching-dialogue editor, with a Russian interface and quality-of-life features for large scripts.*
 
