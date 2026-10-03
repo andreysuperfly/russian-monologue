@@ -1,3 +1,20 @@
+# russian-monologue
+
+Форк [Monologue](https://github.com/monologue-tool/monologue) — редактора ветвящихся диалогов на Godot — с русским интерфейсом и удобствами для больших сценариев.
+*A fork of [Monologue](https://github.com/monologue-tool/monologue), the Godot branching-dialogue editor, with a Russian interface and quality-of-life features for large scripts.*
+
+**Что уже есть / What's in so far**
+- Русский и английский интерфейс, переключение в «Правка → Настройки → Язык интерфейса» (на лету). / Russian & English UI, switch in Edit → Preferences → Interface language (live).
+- Открытие файла `.mnlp` при запуске: `open -a Monologue --args путь.mnlp`. / Opens a `.mnlp` passed on the command line.
+- Группы сюжетных линий слева: имя «Группа · Название» складывается в сворачиваемую группу. / Storylines named `Group · Name` are shown in collapsible groups.
+
+**В работе / Planned**: условия фразой (и / или / не), «уже был здесь» без ручных флагов, песочница состояния при прогоне, «где используется», общий список проблем, текст на карточках схемы, цвета и группы узлов, сохранённые маршруты, шаблоны, экспорт сценария текстом.
+
+Перевод: таблица `i18n/make_ru.py` → `i18n/ru.csv` (английский текст — ключ). Translations live in `i18n/`.
+Оригинальный проект и лицензия MIT — © Atomic Junky. Original project and MIT license © Atomic Junky.
+
+---
+
 ![Monologue](title_banner.png)
 
 ![GitHub stars](https://img.shields.io/github/stars/monologue-tool/monologue?style=flat-square) ![Latest Release](https://img.shields.io/github/v/release/monologue-tool/monologue?style=flat-square) ![Godot Engine 4.7](https://img.shields.io/badge/Godot-4.7-blue?style=flat-square) ![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)

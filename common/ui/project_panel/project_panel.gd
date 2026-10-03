@@ -79,9 +79,44 @@ func _rebuild_explorer() -> void:
 		collection_btn.set_meta("document", collection)
 		collections_container.add_child(collection_btn)
 
-	_add_document_rows(project.top_level_storylines(), 0, ButtonGroup.new())
+	_add_grouped_rows(project.top_level_storylines(), ButtonGroup.new())
 
 	_show_open_storyline()
+
+
+## Группы слева (автор): имя «Группа · Имя» — линия ложится в сворачиваемую группу, на кнопке только «Имя».
+## Линии без « · » идут как раньше, без группы. Группы — в порядке первого появления.
+const GROUP_SEPARATOR: String = " · "
+
+func _add_grouped_rows(documents: Array[StorylineDocument], button_group: ButtonGroup) -> void:
+	var plain: Array[StorylineDocument] = []
+	var groups: Dictionary = {}
+	var order: Array[String] = []
+	for document: StorylineDocument in documents:
+		var cut: int = document.name.find(GROUP_SEPARATOR)
+		if cut < 0:
+			plain.append(document)
+			continue
+		var title: String = document.name.substr(0, cut)
+		if not groups.has(title):
+			groups[title] = [] as Array[StorylineDocument]
+			order.append(title)
+		groups[title].append(document)
+	for title: String in order:
+		var header: Button = Button.new()
+		header.text = "▾ " + title
+		header.flat = true
+		header.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		header.add_theme_color_override("font_color", Color(0.75, 0.72, 0.66))
+		storylines_container.add_child(header)
+		var first: int = storylines_container.get_child_count()
+		_add_document_rows(groups[title], 1, button_group)
+		var rows: Array[Node] = storylines_container.get_children().slice(first)
+		header.pressed.connect(func() -> void:
+			var open: bool = not rows.is_empty() and rows[0].visible
+			for r: Node in rows: r.visible = not open
+			header.text = ("▸ " if open else "▾ ") + title)
+	_add_document_rows(plain, 0, button_group)
 
 
 ## One row per document, with whatever sits inside it underneath and pushed in.
@@ -96,7 +131,8 @@ func _add_document_rows(
 		row.add_theme_constant_override("margin_left", depth * INDENT)
 
 		var button: Button = Button.new()
-		button.text = document.name
+		var cut: int = document.name.find(GROUP_SEPARATOR)
+		button.text = document.name.substr(cut + GROUP_SEPARATOR.length()) if cut >= 0 else document.name
 		button.toggle_mode = true
 		button.theme_type_variation = "ToggleButton"
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -162,6 +198,9 @@ func _on_storyline_button_pressed(storyline: StorylineDocument) -> void:
 
 ## A refused name leaves the button showing the old one, and the reason in the log.
 func _on_storyline_renamed(new_name: String, storyline: StorylineDocument) -> void:
+	var cut: int = storyline.name.find(GROUP_SEPARATOR)
+	if cut >= 0 and new_name.find(GROUP_SEPARATOR) < 0:
+		new_name = storyline.name.substr(0, cut + GROUP_SEPARATOR.length()) + new_name
 	ProjectManager.current_project.rename_storyline(storyline, new_name)
 
 

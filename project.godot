@@ -33,6 +33,7 @@ EventBus="*res://autoloads/event_bus.gd"
 Log="*uid://bstbvfwoltk8n"
 App="*res://autoloads/app.gd"
 ConfigManager="*uid://b5ifbbjetj5cm"
+Locale="*res://i18n/locale.gd"
 ProjectManager="*res://autoloads/project_manager.gd"
 Monologue="*res://common/plugins/monologue_bootstrap.gd"
 ImageLoader="res://autoloads/image_loader.gd"
@@ -224,3 +225,7 @@ anti_aliasing/quality/msaa_2d=2
 viewport/transparent_background=true
 anti_aliasing/quality/screen_space_aa=1
 environment/defaults/default_environment="res://default_env.tres"
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://i18n/ru.ru.translation")

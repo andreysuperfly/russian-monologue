@@ -24,12 +24,16 @@ func _ready() -> void:
 	EventBus.select_new_node.connect(_select_new_node)
 	EventBus.test_trigger.connect(test_project)
 
-	var args: PackedStringArray = OS.get_cmdline_args()
+	var args: PackedStringArray = OS.get_cmdline_args() + OS.get_cmdline_user_args()
+	var to_open: String = ""
 	for arg: String in args:
 		if arg.ends_with(".mnlp") and FileAccess.file_exists(arg):
-			Log.warn("Attempt to open mlnp file on startup.")
+			to_open = arg
 
 	ProjectManager.load_project(MonologueProject.new())
+	# файл из командной строки (open -a Monologue --args путь.mnlp) — открыть сразу
+	if not to_open.is_empty():
+		EventBus.load_project.emit.call_deferred(to_open)
 
 
 func _select_new_node() -> void:

@@ -15,4 +15,6 @@ dest_files=["res://.godot/imported/expanded_arrow.svg-53508031ccbb7d1da903c6e662
 base_scale=1.0
 saturation=1.0
 color_map={}
+fix_alpha_border=false
+premult_alpha=false
 compress=true
