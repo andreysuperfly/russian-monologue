@@ -677,6 +677,8 @@ func _center_on(node: InspectableNode) -> void:
 	if node == null or node.graph_view == null or not is_instance_valid(node.graph_view):
 		return
 	var graph: GraphEdit = node.graph_view.get_parent() as GraphEdit
+	if graph is MonologueGraphEdit:
+		(graph as MonologueGraphEdit).jumped.emit()
 	if graph:
 		graph.scroll_offset = node.graph_view.position_offset * graph.zoom - graph.size / 2.0 + node.graph_view.size * graph.zoom / 2.0
 

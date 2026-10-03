@@ -137,6 +137,7 @@ func add_graph_node_view(node: InspectableNode) -> GraphNode:
 
 	if node.get_type() == "sentence":
 		graph_node.gui_input.connect(_on_sentence_view_input.bind(graph_node, node))
+	graph_node.gui_input.connect(_note_press_on_text.bind(graph_node))
 
 	add_child(graph_node)
 	if not node.property_changed.is_connected(_on_inspectable_node_property_changed):
@@ -162,6 +163,23 @@ func _on_section_view_input(event: InputEvent, node: InspectableNode) -> void:
 	# the event here means opening a section does not also pick it up and carry it.
 	accept_event()
 	EventBus.request_storyline_inspection.emit.call_deferred(section)
+
+
+## A press on a card's text picks the card but leaves the inspector shut; the frame around the
+## text opens it (russian-monologue). Read by the graph container while the press lasts.
+var pressed_on_text: bool = false
+## The view is about to move to another spot of the same storyline; back/forward remember it.
+signal jumped
+
+
+func _note_press_on_text(event: InputEvent, graph_node: GraphNode) -> void:
+	var press: InputEventMouseButton = event as InputEventMouseButton
+	if press == null or not press.pressed or press.button_index != MOUSE_BUTTON_LEFT:
+		return
+	var text: Control = graph_node.get_node_or_null(NodePath(GraphNodeViewFactory.PREVIEW_NAME))
+	pressed_on_text = text != null and text.visible and Rect2(text.position, text.size).has_point(press.position)
+	if pressed_on_text:
+		get_tree().create_timer(0.2).timeout.connect(func() -> void: pressed_on_text = false)
 
 
 ## Double-click a line's card to write the line right there (russian-monologue).
@@ -987,6 +1005,7 @@ func _add_jump_link(from_node: InspectableNode, from_property: String, to_node: 
 	var target_view: GraphNode = to_node.graph_view
 	link.pressed.connect(func() -> void:
 		set_selected(target_view)
+		jumped.emit()
 		scroll_offset = target_view.position_offset * zoom - size / 2.0 + target_view.size * zoom / 2.0)
 	from_node.graph_view.add_child(link)
 

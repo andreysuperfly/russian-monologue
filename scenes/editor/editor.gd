@@ -223,6 +223,7 @@ func _keep_clear_of_window_buttons() -> void:
 
 var _history: Array[String] = []
 var _history_at: int = -1
+var _views: Array[Dictionary] = []
 var _walking: bool = false
 var _back_button: Button
 var _forward_button: Button
@@ -240,7 +241,10 @@ func _add_history_buttons() -> void:
 		if run:
 			bar.move_child(b, run.get_index())
 	EventBus.request_storyline_inspection.connect(_remember_storyline)
+	graph_container.graph.scroll_offset_changed.connect(_on_view_moved)
+	graph_container.graph.jumped.connect(_on_graph_jump)
 	ProjectManager.project_loaded.connect(func() -> void:
+		_views.clear()
 		_history.clear()
 		_history_at = -1
 		_refresh_history_buttons())
@@ -258,15 +262,43 @@ func _history_button(arrow: String, tip: String, step: int) -> Button:
 	return b
 
 
+## A place is a storyline and where the view stood in it, so stepping back after a jump inside
+## one storyline (a ↩ link, «where used») returns to the spot, not just to the storyline.
 func _remember_storyline(storyline: StorylineDocument) -> void:
 	if _walking or storyline == null:
 		return
 	if _history_at >= 0 and _history[_history_at] == storyline.id:
 		return
+	_push_place(storyline.id)
+
+
+## Called by the graph right before it moves the view somewhere else in the same storyline.
+func _on_graph_jump() -> void:
+	var graph: MonologueGraphEdit = graph_container.graph
+	if _walking or _history_at < 0 or graph.storyline_id != _history[_history_at]:
+		return
+	# just arrived here and not looked around yet: the jump is part of arriving
+	if _views[_history_at].is_empty():
+		return
+	# before the view moves, so the move is written into the new place, not the old one
+	_push_place(graph.storyline_id)
+
+
+func _push_place(storyline_id: String) -> void:
 	_history.resize(_history_at + 1)  # going somewhere new forgets the way forward
-	_history.append(storyline.id)
+	_views.resize(_history_at + 1)
+	_history.append(storyline_id)
+	_views.append({})
 	_history_at = _history.size() - 1
 	_refresh_history_buttons()
+
+
+## Keeps the current place's view up to date as the user scrolls and zooms.
+func _on_view_moved(_offset: Vector2 = Vector2.ZERO) -> void:
+	var graph: MonologueGraphEdit = graph_container.graph
+	if _walking or _history_at < 0 or graph.storyline_id != _history[_history_at]:
+		return
+	_views[_history_at] = {"offset": graph.scroll_offset, "zoom": graph.zoom}
 
 
 func _walk_history(step: int) -> void:
@@ -277,10 +309,20 @@ func _walk_history(step: int) -> void:
 		if storyline:
 			_history_at = at
 			_walking = true
-			EventBus.request_storyline_inspection.emit(storyline)
+			var graph: MonologueGraphEdit = graph_container.graph
+			if graph.storyline_id != storyline.id:
+				EventBus.request_storyline_inspection.emit(storyline)
+				await get_tree().process_frame
+				await get_tree().process_frame
+			var place: Dictionary = _views[at]
+			if not place.is_empty():
+				graph.zoom = place["zoom"]
+				graph.scroll_offset = place["offset"]
+			await get_tree().process_frame
 			_walking = false
 			break
 		_history.remove_at(at)  # a storyline that was deleted since
+		_views.remove_at(at)
 		if step < 0:
 			at -= 1
 	_refresh_history_buttons()

@@ -199,7 +199,11 @@ func _apply_selection(nodes: Array[InspectableObject], storyline_id: String) -> 
 		else:
 			node.graph_view.selected = true
 
-	EventBus.request_objects_inspection.emit(nodes)
+	# picked by its text: selected, but the inspector stays shut (russian-monologue)
+	if graph.pressed_on_text and nodes.size() == 1:
+		EventBus.request_objects_inspection.emit([] as Array[InspectableObject])
+	else:
+		EventBus.request_objects_inspection.emit(nodes)
 	_is_applying_selection = false
 
 
