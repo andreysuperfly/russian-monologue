@@ -236,7 +236,7 @@ T = {
 
 # --- как говорят по-русски (вычитка 2026-10-03): поверх строк выше ---
 T.update({
-"World":"Мир","Collections":"Коллекции","Compact Cards":"Компактные карточки","Node color":"Цвет узла","Cards show only their title, wired rows and preview.":"На карточке только заголовок, подключённые строки и суть.","↻ Check again":"↻ Проверить снова","ERROR":"ОШИБКА","WARNING":"ПРЕДУПРЕЖДЕНИЕ","Go to →":"Перейти →","Go to %s":"Перейти: %s","Delete %d nodes":"Удалить узлы: %d","Editing %d objects at once.":"Выбрано: %d — правка идёт всем сразу.",
+"Double-click a place to open it on the graph.":"Двойной щелчок — открыть это место на схеме.","Search variable, item or character…":"Найти переменную, предмет или персонажа…","No target selected.":"Ничего не выбрано.","World":"Мир","Collections":"Коллекции","Compact Cards":"Компактные карточки","Node color":"Цвет узла","Cards show only their title, wired rows and preview.":"На карточке только заголовок, подключённые строки и суть.","↻ Check again":"↻ Проверить снова","ERROR":"ОШИБКА","WARNING":"ПРЕДУПРЕЖДЕНИЕ","Go to →":"Перейти →","Go to %s":"Перейти: %s","Delete %d nodes":"Удалить узлы: %d","Editing %d objects at once.":"Выбрано: %d — правка идёт всем сразу.",
 "Back (⌘[)":"Назад (⌘[)","Forward (⌘])":"Вперёд (⌘])","pass":"да","fail":"нет","one_shot":"скрыть после выбора","enable_condition":"с условием","description":"описание","Extra":"Прочее",
 # решено с автором: «Начало», «Инвентарь», «Проверка истории», короткие подписи связей
 "Root":"Начало","start":"начало",

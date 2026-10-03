@@ -67,7 +67,7 @@ static func _make_item_row(
 	if item.get_type() in ["character", "item", "variable"]:
 		var usages_button: Button = Button.new()
 		usages_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		usages_button.icon = load("res://ui/assets/icons/link.svg")
+		usages_button.icon = load("res://ui/assets/icons/search.svg")
 		usages_button.tooltip_text = owner.tr("Where used")
 		usages_button.theme_type_variation = "ListItemIconButton"
 		var usage_id: String = str(item.get_property_value("id"))

@@ -15,8 +15,11 @@ static var _instance: ProblemsWindow
 var _errors_pill: Label
 var _warnings_pill: Label
 var _problems_container: VBoxContainer
+var _usage_search: LineEdit
 var _usage_target: OptionButton
-var _usages: Tree
+var _usages_container: VBoxContainer
+var _all_usage_targets: Array[Dictionary] = []
+var _selected_usage_card: PanelContainer = null
 var _path_target: OptionButton
 var _paths: Tree
 
@@ -29,6 +32,9 @@ var _tabs: TabContainer
 static func show_usages(parent: Node, target_id: String) -> void:
 	open_for(parent)
 	_instance._tabs.current_tab = 1
+	if _instance._usage_search != null and not _instance._usage_search.text.is_empty():
+		_instance._usage_search.text = ""
+		_instance._filter_targets("")
 	for index: int in _instance._usage_target.item_count:
 		if str(_instance._usage_target.get_item_metadata(index)) == target_id:
 			_instance._usage_target.select(index)
@@ -89,13 +95,33 @@ func _init() -> void:
 	# --- usages ---
 	var usages_page: VBoxContainer = VBoxContainer.new()
 	usages_page.name = "Where used"
+	usages_page.add_theme_constant_override("separation", 8)
 	tabs.add_child(usages_page)
+
+	_usage_search = LineEdit.new()
+	_usage_search.placeholder_text = tr("Search variable, item or character…")
+	_usage_search.clear_button_enabled = true
+	_usage_search.text_changed.connect(func(query: String) -> void: _filter_targets(query.strip_edges()))
+	usages_page.add_child(_usage_search)
+
 	_usage_target = OptionButton.new()
 	_usage_target.item_selected.connect(func(_i: int) -> void: _fill_usages())
 	usages_page.add_child(_usage_target)
-	_usages = _make_tree(["Where", "Field"])
-	_usages.item_activated.connect(_on_row_activated.bind(_usages))
-	usages_page.add_child(_usages)
+
+	var usages_scroll: ScrollContainer = ScrollContainer.new()
+	usages_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	usages_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	usages_page.add_child(usages_scroll)
+
+	_usages_container = VBoxContainer.new()
+	_usages_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_usages_container.add_theme_constant_override("separation", 6)
+	usages_scroll.add_child(_usages_container)
+
+	var usage_hint: Label = Label.new()
+	usage_hint.text = tr("Double-click a place to open it on the graph.")
+	usage_hint.modulate = Color(1, 1, 1, 0.5)
+	usages_page.add_child(usage_hint)
 
 	# --- path to an ending: read backwards ---
 	var path_page: VBoxContainer = VBoxContainer.new()
@@ -343,27 +369,56 @@ func _extra_checks(project: MonologueProject) -> Array:
 # ---------- usages ----------
 
 func _fill_targets() -> void:
-	_usage_target.clear()
+	_all_usage_targets.clear()
 	var project: MonologueProject = ProjectManager.current_project
 	if project == null:
+		_usage_target.clear()
+		_fill_usages()
 		return
 	for collection: String in ["variables", "items", "characters"]:
 		for record: Variant in project.get_collection_value(collection):
 			if record is Dictionary:
-				_usage_target.add_item("%s: %s" % [tr(collection), str(record.get("name", record.get("id", "")))])
-				_usage_target.set_item_metadata(_usage_target.item_count - 1, str(record.get("id", "")))
+				var label: String = "%s: %s" % [tr(collection), str(record.get("name", record.get("id", "")))]
+				var id: String = str(record.get("id", ""))
+				_all_usage_targets.append({"text": label, "id": id})
+	var current_query: String = _usage_search.text.strip_edges() if _usage_search != null else ""
+	_filter_targets(current_query)
+
+
+func _filter_targets(query: String) -> void:
+	var prev_id: String = ""
+	if _usage_target.selected >= 0 and _usage_target.item_count > 0:
+		prev_id = str(_usage_target.get_item_metadata(_usage_target.selected))
+	_usage_target.clear()
+	var select_idx: int = -1
+	for entry: Dictionary in _all_usage_targets:
+		if query.is_empty() or entry["text"].to_lower().contains(query.to_lower()):
+			_usage_target.add_item(entry["text"])
+			var idx: int = _usage_target.item_count - 1
+			_usage_target.set_item_metadata(idx, entry["id"])
+			if entry["id"] == prev_id:
+				select_idx = idx
+	if _usage_target.item_count > 0:
+		_usage_target.select(select_idx if select_idx >= 0 else 0)
 	_fill_usages()
 
 
 func _fill_usages() -> void:
-	_usages.clear()
-	var root: TreeItem = _usages.create_item()
+	for child: Node in _usages_container.get_children():
+		child.queue_free()
+	_selected_usage_card = null
+
 	var project: MonologueProject = ProjectManager.current_project
-	if project == null or _usage_target.selected < 0:
+	if project == null or _usage_target.selected < 0 or _usage_target.item_count == 0:
+		_show_empty_usages(tr("No target selected."))
 		return
+
 	var target: String = str(_usage_target.get_item_metadata(_usage_target.selected))
 	var sites: Array[ReferenceSite] = project.get_object_registry().get_referrers(target)
-	# grouped by storyline, each place with what is said there (russian-monologue)
+	if sites.is_empty():
+		_show_empty_usages(tr("Not used anywhere."))
+		return
+
 	var groups: Dictionary = {}
 	var order: Array = []
 	for site: ReferenceSite in sites:
@@ -374,29 +429,136 @@ func _fill_usages() -> void:
 			order.append(group)
 		groups[group].append([site, found])
 	order.sort()
+
 	for group: String in order:
-		var head: TreeItem = _usages.create_item(root)
-		head.set_text(0, "%s  (%d)" % [group, groups[group].size()])
-		head.set_custom_color(0, Color(0.85, 0.85, 0.85))
-		head.set_metadata(0, "")
+		var group_header: HBoxContainer = HBoxContainer.new()
+		group_header.add_theme_constant_override("separation", 8)
+
+		var title_label: Label = Label.new()
+		title_label.text = group
+		title_label.add_theme_font_size_override("font_size", 13)
+		title_label.add_theme_color_override("font_color", Color(0.75, 0.75, 0.78))
+		group_header.add_child(title_label)
+
+		var count_pill: Label = _make_pill(Color(0.22, 0.23, 0.27))
+		count_pill.text = str(groups[group].size())
+		count_pill.add_theme_font_size_override("font_size", 11)
+		group_header.add_child(count_pill)
+
+		_usages_container.add_child(group_header)
+
 		for entry: Array in groups[group]:
 			var site: ReferenceSite = entry[0]
 			var found: Array = entry[1]
-			var said: String = _said(project, found[1] as InspectableNode, site.owner_id) if not found.is_empty() else _where(project, site.owner_id, site.document_name)
-			_add_row(head, [said, tr(site.property_name)], site.owner_id)
-	if sites.is_empty():
-		_add_row(root, [tr("Not used anywhere."), ""], "")
+			var storyline_name: String = (found[0] as StorylineDocument).name if not found.is_empty() else tr("Collections")
+			var said_text: String = _said(project, found[1] as InspectableNode, site.owner_id) if not found.is_empty() else _where(project, site.owner_id, site.document_name)
+			var field_name: String = tr(site.property_name)
+			var card: PanelContainer = _make_usage_card(storyline_name, said_text, field_name, site.owner_id)
+			_usages_container.add_child(card)
+
+
+func _make_usage_card(storyline_name: String, said_text: String, field_name: String, object_id: String) -> PanelContainer:
+	var card: PanelContainer = PanelContainer.new()
+	card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	card.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var style_normal: StyleBoxFlat = StyleBoxFlat.new()
+	style_normal.bg_color = Color(0.12, 0.12, 0.15)
+	style_normal.set_corner_radius_all(8)
+	style_normal.set_content_margin_all(10)
+
+	var style_hover: StyleBoxFlat = StyleBoxFlat.new()
+	style_hover.bg_color = Color(0.16, 0.17, 0.21)
+	style_hover.set_corner_radius_all(8)
+	style_hover.set_content_margin_all(10)
+
+	var style_selected: StyleBoxFlat = StyleBoxFlat.new()
+	style_selected.bg_color = Color(0.17, 0.20, 0.26)
+	style_selected.border_color = Color(0.35, 0.55, 0.90)
+	style_selected.set_border_width_all(1)
+	style_selected.set_corner_radius_all(8)
+	style_selected.set_content_margin_all(10)
+
+	card.set_meta("style_normal", style_normal)
+	card.set_meta("style_hover", style_hover)
+	card.set_meta("style_selected", style_selected)
+	card.add_theme_stylebox_override("panel", style_normal)
+
+	card.mouse_entered.connect(func() -> void:
+		if _selected_usage_card != card:
+			card.add_theme_stylebox_override("panel", style_hover)
+	)
+	card.mouse_exited.connect(func() -> void:
+		if _selected_usage_card != card:
+			card.add_theme_stylebox_override("panel", style_normal)
+	)
+
+	card.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			if event.double_click:
+				_jump_to_object(object_id)
+			else:
+				_select_usage_card(card)
+	)
+
+	var hbox: HBoxContainer = HBoxContainer.new()
+	hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_theme_constant_override("separation", 12)
+	card.add_child(hbox)
+
+	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 4)
+	hbox.add_child(vbox)
+
+	var text_label: Label = Label.new()
+	text_label.text = said_text
+	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_label.add_theme_color_override("font_color", Color.WHITE)
+	text_label.add_theme_font_size_override("font_size", 15)
+	vbox.add_child(text_label)
+
+	var pill: Label = _make_pill(Color(0.20, 0.23, 0.29))
+	pill.text = field_name
+	pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hbox.add_child(pill)
+
+	return card
+
+
+func _select_usage_card(card: PanelContainer) -> void:
+	if _selected_usage_card != null and is_instance_valid(_selected_usage_card):
+		_selected_usage_card.add_theme_stylebox_override("panel", _selected_usage_card.get_meta("style_normal"))
+	_selected_usage_card = card
+	if _selected_usage_card != null:
+		_selected_usage_card.add_theme_stylebox_override("panel", _selected_usage_card.get_meta("style_selected"))
+
+
+func _show_empty_usages(message: String) -> void:
+	var empty_box: CenterContainer = CenterContainer.new()
+	empty_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	empty_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	empty_box.custom_minimum_size = Vector2(0, 160)
+
+	var empty_label: Label = Label.new()
+	empty_label.text = message
+	empty_label.modulate = Color(1, 1, 1, 0.5)
+	empty_label.add_theme_font_size_override("font_size", 15)
+	empty_box.add_child(empty_label)
+
+	_usages_container.add_child(empty_box)
 
 
 ## What is said at a node: the line of a sentence, the text of an option, else the node's label.
 func _said(project: MonologueProject, node: InspectableNode, object_id: String) -> String:
 	var language: String = project.active_language_code
 	if node.get_type() == "sentence":
-		return NodePreview.trim(Util.to_label(node.get_property_value("line"), language), 110)
+		return NodePreview.trim(Util.to_label(node.get_property_value("line"), language), 400)
 	if node.get_type() == "choice":
 		for option: Variant in node.get_property_value("choices"):
 			if option is Dictionary and str(option.get("id", "")) == object_id:
-				return "» " + NodePreview.trim(Util.to_label(option.get("text", {}), language), 106)
+				return "» " + NodePreview.trim(Util.to_label(option.get("text", {}), language), 400)
 	return NodePreview.node_label(project, node.get_id())
 
 
@@ -504,6 +666,19 @@ func _jump_to_object(object_id: String) -> void:
 	var selection: Array[InspectableObject] = [found[1]]
 	EventBus.request_storyline_inspection.emit(storyline)
 	EventBus.request_nodes_selection.emit(selection, storyline.id, false)
+	_center_on(found[1] as InspectableNode)
+	# went there: the window has done its job
+	hide()
+
+
+## Brings the node into view on the graph, not just selects it somewhere off screen.
+func _center_on(node: InspectableNode) -> void:
+	await get_tree().process_frame
+	if node == null or node.graph_view == null or not is_instance_valid(node.graph_view):
+		return
+	var graph: GraphEdit = node.graph_view.get_parent() as GraphEdit
+	if graph:
+		graph.scroll_offset = node.graph_view.position_offset * graph.zoom - graph.size / 2.0 + node.graph_view.size * graph.zoom / 2.0
 
 
 func _on_row_activated(tree: Tree) -> void:
