@@ -24,6 +24,7 @@ func _ready() -> void:
 	EventBus.select_new_node.connect(_select_new_node)
 	EventBus.test_trigger.connect(test_project)
 	_keep_clear_of_window_buttons()
+	_add_history_buttons()
 
 	var args: PackedStringArray = OS.get_cmdline_args() + OS.get_cmdline_user_args()
 	var to_open: String = ""
@@ -207,3 +208,91 @@ func _keep_clear_of_window_buttons() -> void:
 		gap.visible = margins.x > 0
 	fit.call()
 	get_tree().root.size_changed.connect(fit)
+
+
+# ---------- back / forward through the storylines looked at (russian-monologue) ----------
+
+var _history: Array[String] = []
+var _history_at: int = -1
+var _walking: bool = false
+var _back_button: Button
+var _forward_button: Button
+
+
+func _add_history_buttons() -> void:
+	var bar: HBoxContainer = get_node_or_null("VBox/Header/HBoxContainer")
+	if bar == null:
+		return
+	var run: Node = bar.get_node_or_null("RunButton")
+	_back_button = _history_button("←", "Back (⌘[)", -1)
+	_forward_button = _history_button("→", "Forward (⌘])", 1)
+	for b: Button in [_back_button, _forward_button]:
+		bar.add_child(b)
+		if run:
+			bar.move_child(b, run.get_index())
+	EventBus.request_storyline_inspection.connect(_remember_storyline)
+	ProjectManager.project_loaded.connect(func() -> void:
+		_history.clear()
+		_history_at = -1
+		_refresh_history_buttons())
+	_refresh_history_buttons()
+
+
+func _history_button(arrow: String, tip: String, step: int) -> Button:
+	var b: Button = Button.new()
+	b.text = arrow
+	b.tooltip_text = tip
+	b.flat = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.pressed.connect(_walk_history.bind(step))
+	return b
+
+
+func _remember_storyline(storyline: StorylineDocument) -> void:
+	if _walking or storyline == null:
+		return
+	if _history_at >= 0 and _history[_history_at] == storyline.id:
+		return
+	_history.resize(_history_at + 1)  # going somewhere new forgets the way forward
+	_history.append(storyline.id)
+	_history_at = _history.size() - 1
+	_refresh_history_buttons()
+
+
+func _walk_history(step: int) -> void:
+	var project: MonologueProject = ProjectManager.current_project
+	var at: int = _history_at + step
+	while project and at >= 0 and at < _history.size():
+		var storyline: StorylineDocument = project.get_storyline(_history[at])
+		if storyline:
+			_history_at = at
+			_walking = true
+			EventBus.request_storyline_inspection.emit(storyline)
+			_walking = false
+			break
+		_history.remove_at(at)  # a storyline that was deleted since
+		if step < 0:
+			at -= 1
+	_refresh_history_buttons()
+
+
+func _refresh_history_buttons() -> void:
+	if _back_button:
+		_back_button.disabled = _history_at <= 0
+		_forward_button.disabled = _history_at >= _history.size() - 1
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_XBUTTON1:
+			_walk_history(-1)
+		elif event.button_index == MOUSE_BUTTON_XBUTTON2:
+			_walk_history(1)
+	elif event is InputEventKey and event.pressed and not event.echo and event.is_command_or_control_pressed():
+		if event.keycode == KEY_BRACKETLEFT:
+			_walk_history(-1)
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_BRACKETRIGHT:
+			_walk_history(1)
+			get_viewport().set_input_as_handled()
