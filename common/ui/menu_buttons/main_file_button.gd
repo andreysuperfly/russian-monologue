@@ -27,6 +27,7 @@ func _build_menu() -> void:
 	add_row("Save Copy...", Callable(), false)
 	add_row("Save Version", Callable(), false)
 	add_separator()
+	add_row("Export screenplay (text)…", _on_export_screenplay)
 	add_submenu_row("Export", _on_export, false)
 	add_separator()
 	add_row("Quit", _on_quit, true, ["mnl_exit"])
@@ -59,6 +60,22 @@ func _on_save_as() -> void:
 
 func _on_export() -> void:
 	pass
+
+
+## The whole project as a script to read (russian-monologue), see Screenplay.
+func _on_export_screenplay() -> void:
+	EventBus.save_file_request.emit(_write_screenplay, ["*.txt;Text"], "", [])
+
+
+func _write_screenplay(path: String) -> void:
+	var project: MonologueProject = ProjectManager.current_project
+	var file: FileAccess = FileAccess.open(path if path.get_extension() != "" else path + ".txt", FileAccess.WRITE)
+	if file == null:
+		Log.error("Could not write %s." % path)
+		return
+	file.store_string(Screenplay.text(project, project.active_language_code))
+	file.close()
+	Log.info(tr("Screenplay written: %s") % path)
 
 
 func _on_quit() -> void:

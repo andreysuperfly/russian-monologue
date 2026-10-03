@@ -72,6 +72,9 @@ T = {
 "Route «%s» gets through.":"Маршрут «%s» проходит.","Route «%s» breaks at step %d: %s":"Маршрут «%s» ломается на шаге %d: %s",
 "Route «%s» ends early, at step %d.":"Маршрут «%s» кончается раньше — на шаге %d.",
 "Save as template…":"Сохранить как шаблон…","Template name":"Имя шаблона","Template saved: %s":"Шаблон сохранён: %s","Templates":"Шаблоны",
+"Export screenplay (text)…":"Экспорт сценария (текст)…","Screenplay written: %s":"Сценарий записан: %s","Not connected to the start":"Не связано с началом",
+"nowhere":"никуда","start":"начало","IF":"ЕСЛИ","pockets":"карманы","Give":"Дать","Take":"Забрать","Set":"Задать","Storyline":"Сюжетная линия","Jump":"Переход","Section":"Раздел","Action":"Действие",
+"Screenplay":"Сценарий",
 # --- разделы проекта ---
 "Storyline":"Сюжетная линия","Storylines":"Сюжетные линии","Characters":"Персонажи","Character":"Персонаж","Locations":"Места","Location":"Место",
 "Variables":"Переменные","Variable":"Переменная","Items":"Предметы","Inventory":"Инвентарь","Collections":"Коллекции","Collection":"Коллекция",

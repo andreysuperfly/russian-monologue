@@ -246,7 +246,21 @@ Save as template…,Сохранить как шаблон…
 Template name,Имя шаблона
 Template saved: %s,Шаблон сохранён: %s
 Templates,Шаблоны
+Export screenplay (text)…,Экспорт сценария (текст)…
+Screenplay written: %s,Сценарий записан: %s
+Not connected to the start,Не связано с началом
+nowhere,никуда
+start,начало
+IF,ЕСЛИ
+pockets,карманы
+Give,Дать
+Take,Забрать
+Set,Задать
 Storyline,Сюжетная линия
+Jump,Переход
+Section,Раздел
+Action,Действие
+Screenplay,Сценарий
 Storylines,Сюжетные линии
 Characters,Персонажи
 Character,Персонаж
@@ -312,18 +326,12 @@ Project loaded!,Проект загружен!
 Sentence,Реплика
 Choice,Выбор
 Condition,Условие
-Action,Действие
 End,Конец
-Jump,Переход
-Section,Раздел
 Checkpoint,Точка сохранения
 Wait,Пауза
 Wait Input,Ждать нажатия
 Input,Ввод
 Reroute,Перенаправление
-Set,Задать
-Give,Дать
-Take,Забрать
 Join,Присоединиться
 Leave,Уйти
 Exits,Выходы

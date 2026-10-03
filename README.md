@@ -4,11 +4,15 @@
 *A fork of [Monologue](https://github.com/monologue-tool/monologue), the Godot branching-dialogue editor, with a Russian interface and quality-of-life features for large scripts.*
 
 **Что уже есть / What's in so far**
-- Русский и английский интерфейс, переключение в «Правка → Настройки → Язык интерфейса» (на лету). / Russian & English UI, switch in Edit → Preferences → Interface language (live).
-- Открытие файла `.mnlp` при запуске: `open -a Monologue --args путь.mnlp`. / Opens a `.mnlp` passed on the command line.
-- Группы сюжетных линий слева: имя «Группа · Название» складывается в сворачиваемую группу. / Storylines named `Group · Name` are shown in collapsible groups.
-
-**В работе / Planned**: условия фразой (и / или / не), «уже был здесь» без ручных флагов, песочница состояния при прогоне, «где используется», общий список проблем, текст на карточках схемы, цвета и группы узлов, сохранённые маршруты, шаблоны, экспорт сценария текстом.
+- Русский и английский интерфейс, «Правка → Настройки → Язык интерфейса», на лету. / Russian & English UI, switch live in Edit → Preferences.
+- Условия фразой: несколько проверок через И / ИЛИ, «НЕ», «был в узле» (сколько раз проходили — без ручных флагов), «в карманах». / Conditions as several checks: AND/OR, NOT, "was at" a node, "carries" an item.
+- Окно проигрывания: панель «Состояние» (переменные можно менять, карманы, пройдено) и перемотка после правки — как в Inky. / Run window: editable State panel; replays your path after an edit.
+- Сохранённые маршруты: записать прохождение и потом проверить, что оно ещё проходит. / Saved routes: record a path, check it still gets through.
+- «Правка → Проблемы и ссылки»: все проблемы одним списком (плюс переменные, которые меняют, но не проверяют, и пометки TODO), «где используется», «путь к концовке» — от концовки назад, что нужно на каждом пути. / Problems & usages window, where-used, path to an ending read backwards.
+- Карточки схемы читаются без открытия (реплика целиком), узел «Заметка» — цветной стикер. / Readable cards, sticky Note node.
+- Шаблоны: выделить узлы → «Сохранить как шаблон…», вставить через «Добавить → Шаблоны». / Templates with their wires.
+- «Файл → Экспорт сценария (текст)…» — весь проект как сценарий для чтения. / Export the whole project as a readable script.
+- Группы сюжетных линий слева («Группа · Название»), открытие `.mnlp` при запуске. / Grouped storylines, open a file on startup.
 
 Перевод: таблица `i18n/make_ru.py` → `i18n/ru.csv` (английский текст — ключ). Translations live in `i18n/`.
 Оригинальный проект и лицензия MIT — © Atomic Junky. Original project and MIT license © Atomic Junky.
