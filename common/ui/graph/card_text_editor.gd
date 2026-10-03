@@ -36,8 +36,6 @@ func _ready() -> void:
 	context_menu_enabled = false
 	var box: StyleBoxFlat = StyleBoxFlat.new()
 	box.bg_color = Color(0.09, 0.09, 0.1)
-	box.border_color = Color(0.85, 0.42, 0.38)
-	box.set_border_width_all(1)
 	box.set_corner_radius_all(6)
 	box.content_margin_left = 12
 	box.content_margin_right = 12
