@@ -55,7 +55,8 @@ const NODES: Array[GDScript] = [
 	preload("res://common/nodes/variable_node/index.gd"),
 	preload("res://common/nodes/inventory_node/index.gd"),
 	preload("res://common/nodes/location_node/index.gd"),
-	preload("res://common/nodes/character_node/index.gd")
+	preload("res://common/nodes/character_node/index.gd"),
+	preload("res://common/nodes/note_node/index.gd"),
 ]
 
 const COLLECTIONS: Array[GDScript] = [

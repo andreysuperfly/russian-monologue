@@ -38,10 +38,11 @@ func get_type() -> String:
 
 ## The line as it will be read, behind whoever says it.
 func _build_preview(language: String = "") -> Control:
-	var line: String = NodePreview.said(self, "line", language)
+	var line: String = NodePreview.trim(Util.to_label(get_property_value("line"), language), 130)
 	var speaker: String = NodePreview.tinted(self, "speaker")
 	if line.is_empty() and speaker.is_empty():
 		return null
+	# whole line, wrapped up to three lines (russian-monologue): the card reads without opening it
 	if speaker.is_empty():
-		return NodePreview.line(NodePreview.plain(line))
-	return NodePreview.line("%s  %s" % [speaker, NodePreview.plain(line)])
+		return NodePreview.paragraph(NodePreview.plain(line), 4)
+	return NodePreview.paragraph("%s  %s" % [speaker, NodePreview.plain(line)], 4)

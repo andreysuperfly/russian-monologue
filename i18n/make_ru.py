@@ -62,6 +62,9 @@ T = {
 "Path":"Путь","Needs":"Что нужно","No way leads here.":"Сюда не ведёт ни один путь.","Needed on every path":"Нужно на любом пути","nothing":"ничего",
 "Path %d — %d steps":"Путь %d — шагов: %d","no conditions":"без условий","Showing the first %d paths.":"Показаны первые %d путей.",
 "Pick":"Выбрать","shown if":"виден, если","Event":"Событие",
+"Note":"Заметка","Notes":"Заметки","note":"заметка","A sticky note for whoever writes the story. Has no wires and never plays.":"Стикер для автора. Без связей, в игре не проигрывается.",
+"What to remember here. Seen only in the editor.":"Что тут важно помнить. Видно только в редакторе.",
+"Yellow":"Жёлтый","Red":"Красный","Green":"Зелёный","Blue":"Синий","Grey":"Серый",
 # --- разделы проекта ---
 "Storyline":"Сюжетная линия","Storylines":"Сюжетные линии","Characters":"Персонажи","Character":"Персонаж","Locations":"Места","Location":"Место",
 "Variables":"Переменные","Variable":"Переменная","Items":"Предметы","Inventory":"Инвентарь","Collections":"Коллекции","Collection":"Коллекция",

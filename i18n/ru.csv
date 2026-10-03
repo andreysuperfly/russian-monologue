@@ -220,6 +220,16 @@ Showing the first %d paths.,Показаны первые %d путей.
 Pick,Выбрать
 shown if,"виден, если"
 Event,Событие
+Note,Заметка
+Notes,Заметки
+note,заметка
+A sticky note for whoever writes the story. Has no wires and never plays.,"Стикер для автора. Без связей, в игре не проигрывается."
+What to remember here. Seen only in the editor.,Что тут важно помнить. Видно только в редакторе.
+Yellow,Жёлтый
+Red,Красный
+Green,Зелёный
+Blue,Синий
+Grey,Серый
 Storyline,Сюжетная линия
 Storylines,Сюжетные линии
 Characters,Персонажи

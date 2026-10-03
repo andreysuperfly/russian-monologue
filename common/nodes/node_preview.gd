@@ -29,6 +29,39 @@ static func line(bbcode: String) -> RichTextLabel:
 	return label
 
 
+## Several wrapped lines (russian-monologue): reading a card without opening it, like Yarn
+## Spinner's graph. Cut after [param max_lines]; on a coloured card when [param tint] is given.
+static func paragraph(bbcode: String, max_lines: int = 3, tint: Color = Color(0, 0, 0, 0)) -> Control:
+	var label: RichTextLabel = RichTextLabel.new()
+	label.bbcode_enabled = true
+	label.text = bbcode
+	label.fit_content = true
+	label.scroll_active = false
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.mouse_filter = Control.MOUSE_FILTER_PASS
+	label.theme_type_variation = "GraphNodeViewPreviewLabel"
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# ~38 characters a line at a usual node width; longer text was already cut by the caller
+	label.custom_minimum_size.y = LINE_HEIGHT * mini(max_lines, maxi(1, ceili(float(label.get_parsed_text().length()) / 32.0)))
+	if tint.a <= 0.0:
+		return label
+	var card: PanelContainer = PanelContainer.new()
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(tint, 0.22)
+	style.border_color = tint
+	style.border_width_left = 3
+	style.content_margin_left = 6.0
+	style.content_margin_right = 6.0
+	style.content_margin_top = 4.0
+	style.content_margin_bottom = 4.0
+	card.add_theme_stylebox_override("panel", style)
+	card.add_child(label)
+	# the view sizes a preview by its minimum height, so the card carries the label's
+	card.custom_minimum_size.y = label.custom_minimum_size.y + 8.0
+	return card
+
+
 static func row(pieces: Array) -> HBoxContainer:
 	var box: HBoxContainer = HBoxContainer.new()
 	box.mouse_filter = Control.MOUSE_FILTER_PASS
