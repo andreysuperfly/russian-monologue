@@ -40,10 +40,8 @@ func get_type() -> String:
 func _build_preview(language: String = "") -> Control:
 	var line: String = NodePreview.trim(Util.to_label(get_property_value("line"), language), 130)
 	var speaker: String = NodePreview.tinted(self, "speaker")
-	# the card's «кто говорит» row already names the speaker; only compact cards, which hide that
-	# row, repeat it here (russian-monologue)
-	if ConfigManager.get_config("compact_cards", false) != true:
-		speaker = ""
+	# the card's title already names the speaker
+	speaker = ""
 	if line.is_empty() and speaker.is_empty():
 		return null
 	# whole line, wrapped up to three lines (russian-monologue): the card reads without opening it

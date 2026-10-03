@@ -66,6 +66,12 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 		key_label.mouse_filter = Control.MOUSE_FILTER_PASS
 		key_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		key_label.text = row.get_key()
+		# a sentence's card is headed by who speaks — «БАБА НЮРА», «РАССКАЗЧИК» — rather than by
+		# «Sentence»; the narrator's lines then read as description at a glance (russian-monologue)
+		if idx == 0 and node.get_type() == "sentence":
+			var who: String = _speaker_name(node)
+			if not who.is_empty():
+				key_label.text = who
 
 		var value_label: Label = Label.new()
 		value_label.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -75,8 +81,11 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 			row.output_type_label if not row.output_type_label.is_empty()
 			else row.get_type_label()
 		)
-		if shown_label:
-			# in the interface language when there is a short word for it: [context] → [ход]
+		# The port's type is for whoever wires things, not for whoever reads the card: the flow
+		# («ход») is said by the dot alone, and an unwired field says nothing. A wired one keeps
+		# its type, which then tells what came in (russian-monologue).
+		var says_type: bool = shown_label and shown_label != "context" and _row_has_wire(row, node)
+		if says_type:
 			var port_word: String = TranslationServer.translate("port " + shown_label)
 			value_label.text = "[%s]" % (port_word if port_word != "port " + shown_label else shown_label)
 
@@ -217,6 +226,7 @@ static func _build_rows(node: InspectableNode) -> Array[GraphNodeRow]:
 	# compact cards (russian-monologue): the title, what is wired and the preview — no idle rows.
 	# Ports are counted from these same rows, so wires stay on the right ports.
 	var is_compact: bool = ConfigManager.get_config("compact_cards", false) == true
+	var filled: bool = _is_filled(node)
 	for prop: Property in node.get_properties():
 		if not prop.is_visible_in_graph():
 			continue
@@ -225,7 +235,12 @@ static func _build_rows(node: InspectableNode) -> Array[GraphNodeRow]:
 		if prop.get_settings_value("is_main_property"):
 			rows.push_front(row)
 			continue
-		if not is_compact or _row_has_wire(row, node):
+		# A row that only takes a wire in is a hint for a blank card — what can go here. Once the
+		# card holds something, it goes; rows a wire leaves from, and wired rows, always stay
+		# (russian-monologue). Compact cards drop every idle row.
+		var wired: bool = _row_has_wire(row, node)
+		var hint_only: bool = not row._enable_right_port and filled
+		if wired or (not is_compact and not hint_only):
 			rows.append(row)
 
 		if prop.type == "collection":
@@ -414,3 +429,42 @@ static func _row_value_text(row: GraphNodeRow, node: InspectableNode) -> String:
 		"bool":
 			return TranslationServer.translate("yes") if bool(value) else TranslationServer.translate("no")
 	return ""
+
+
+static func _speaker_name(node: InspectableNode) -> String:
+	var prop: Property = node.get_property("speaker")
+	if prop == null:
+		return ""
+	var scope: String = str(prop.get_settings_value(PropertySettings.KEY_REFERENCE_SCOPE, "characters"))
+	return ReferenceResolver.resolve_label(ProjectManager.current_project, scope, str(prop.get_value()), node)
+
+
+## Whether a node holds anything yet: a field drawn on the card with a non-empty value. A fresh
+## node says no, and so shows every row as a hint.
+static func _is_filled(node: InspectableNode) -> bool:
+	for prop: Property in node.get_properties():
+		if not prop.is_visible_in_graph() or prop.is_main_property():
+			continue
+		var value: Variant = prop.get_value()
+		# what a new node starts with is not something written into it
+		if prop.default_value != null and value == prop.default_value:
+			continue
+		match typeof(value):
+			TYPE_NIL:
+				continue
+			TYPE_STRING, TYPE_STRING_NAME:
+				if not str(value).is_empty():
+					return true
+			TYPE_DICTIONARY:
+				if not Util.to_label(value, "").is_empty() and not (value as Dictionary).is_empty():
+					return true
+			TYPE_ARRAY:
+				if not (value as Array).is_empty():
+					return true
+			TYPE_BOOL:
+				if value:
+					return true
+			TYPE_INT, TYPE_FLOAT:
+				if value != 0:
+					return true
+	return false

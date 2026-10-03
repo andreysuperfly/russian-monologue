@@ -134,18 +134,11 @@ func test_a_sentence_previews_as_who_says_what() -> void:
 	node.get_property("speaker").set_value(_first_record_id(project, "characters"))
 	node.get_property("line").set_value({"en": "Hello there.", "fr": "Bonjour."})
 
-	# a full card names the speaker in its own row, so the preview leaves it out; a compact
-	# card, which hides that row, names it in the preview
-	var was_compact: Variant = ConfigManager.get_config("compact_cards", false)
-	ConfigManager.set_config("compact_cards", false)
-	var full: String = _words_in(node._build_preview("en"))
-	assert_str(full).contains("Hello there.")
-	assert_str(full).not_contains(narrator)
-	ConfigManager.set_config("compact_cards", true)
+	# the card's title names the speaker, so the preview is the line alone, compact or not
 	var english: String = _words_in(node._build_preview("en"))
-	ConfigManager.set_config("compact_cards", was_compact)
-	assert_str(english).contains(narrator)
 	assert_str(english).contains("Hello there.")
+	assert_str(english).not_contains(narrator)
+	assert_str(GraphNodeViewFactory._speaker_name(node)).is_equal(narrator)
 
 	# The reader's language, not whichever one it happened to be written in first.
 	assert_str(_words_in(node._build_preview("fr"))).override_failure_message(
