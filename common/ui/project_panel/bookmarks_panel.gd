@@ -9,7 +9,11 @@ enum MenuId {
 	REMOVE_ITEM = 5,
 }
 
+const PLUS_ICON: Texture2D = preload("res://ui/assets/icons/plus.svg")
+
 var tree: Tree
+## A folder just made: once the tree is rebuilt, its name is opened for typing.
+var _rename_next: String = ""
 var hint_label: Label
 var popup_menu: PopupMenu
 
@@ -54,6 +58,10 @@ func _ready() -> void:
 	tree.item_mouse_selected.connect(_on_item_mouse_selected)
 	tree.empty_clicked.connect(_on_empty_clicked)
 	tree.gui_input.connect(_on_tree_gui_input)
+	tree.button_clicked.connect(_on_folder_plus)
+	# drop storylines from the list below onto a folder; drag folders and entries about
+	tree.set_drag_forwarding(_drag_from_tree, _can_drop, _drop)
+	hint_label.set_drag_forwarding(Callable(), _can_drop, _drop)
 
 	ProjectManager.project_loaded.connect(_on_project_loaded)
 	EventBus.storylines_changed.connect(rebuild)
@@ -79,6 +87,9 @@ func rebuild() -> void:
 
 	_building = false
 	_fit_height()
+	if not _rename_next.is_empty():
+		_rename_folder_by_id.call_deferred(_rename_next)
+		_rename_next = ""
 
 
 ## The tree sits in the scrolling project list, which gives it no height of its own: it is made
@@ -112,6 +123,8 @@ func _build_folder_tree(parent_item: TreeItem, folder: Dictionary, project: Mono
 	folder_item.set_meta("folder_id", folder_id)
 	folder_item.set_meta("folder", folder)
 	folder_item.collapsed = not is_open
+	folder_item.add_button(0, _small_plus(), 0, false, tr("New folder inside"))
+	folder_item.set_button_color(0, 0, Color(1, 1, 1, 0.45))
 
 	for subfolder: Variant in folder.get("folders", []):
 		if subfolder is Dictionary:
@@ -371,6 +384,9 @@ func _connect_project() -> void:
 	if _connected_project:
 		if not _connected_project.content_changed.is_connected(rebuild):
 			_connected_project.content_changed.connect(rebuild)
+		# an undo or redo of a collection change comes back through the settings
+		_connected_project.settings.property_changed.connect(func(name: String) -> void:
+			if name == Bookmarks.SETTING: rebuild.call_deferred())
 
 
 func _on_project_loaded() -> void:
@@ -405,3 +421,97 @@ static func _node_text(project: MonologueProject, storyline_id: String, node_id:
 		"genius_scene":
 			return "сцена " + str(node.get_property_value("key"))
 	return NodePreview.node_label(project, node_id)
+
+
+# ---------- drag and drop ----------
+
+func _drag_from_tree(at: Vector2) -> Variant:
+	var item: TreeItem = tree.get_item_at_position(at)
+	if item == null:
+		return null
+	var tag: Label = Label.new()
+	tag.text = item.get_text(0)
+	set_drag_preview(tag)
+	if item.get_meta("type", "") == "folder":
+		return {"bookmark_folder": str(item.get_meta("folder_id", ""))}
+	return {
+		"bookmark": item.get_meta("item_data", {}),
+		"from_folder": str(item.get_meta("folder_id", "")),
+		"from_index": int(item.get_meta("item_index", -1)),
+	}
+
+
+func _can_drop(at: Vector2, data: Variant) -> bool:
+	if not (data is Dictionary and (data.has("bookmark") or data.has("bookmark_folder"))):
+		return false
+	tree.drop_mode_flags = Tree.DROP_MODE_ON_ITEM
+	return true
+
+
+## The folder under the pointer, or the folder of the entry under it; "" for empty space.
+func _folder_at(at: Vector2) -> String:
+	if not tree.visible:
+		return ""
+	var item: TreeItem = tree.get_item_at_position(at)
+	if item == null:
+		return ""
+	return str(item.get_meta("folder_id", ""))
+
+
+func _drop(at: Vector2, data: Variant) -> void:
+	var into: String = _folder_at(at)
+	if data.has("bookmark_folder"):
+		Bookmarks.move_folder(str(data["bookmark_folder"]), into)
+		return
+	var entry: Dictionary = data["bookmark"]
+	if into.is_empty():
+		into = Bookmarks.add_folder("", tr("New folder"))
+	if data.has("from_folder") and str(data["from_folder"]) == into:
+		return
+	if not data.has("from_folder"):
+		Bookmarks.add_item(into, entry)
+		return
+	# one undo step for the move
+	var history: CommandManager = ProjectManager.current_project.command_manager
+	var step: CommandTransaction = history.begin("Move in a collection")
+	Bookmarks.add_item(into, entry)
+	Bookmarks.remove_item(str(data["from_folder"]), int(data["from_index"]))
+	step.commit()
+
+
+## + on a folder's row: a folder inside it, named right away.
+func _on_folder_plus(item: TreeItem, _column: int, _id: int, _button: int) -> void:
+	var parent_id: String = str(item.get_meta("folder_id", ""))
+	Bookmarks.set_open(parent_id, true)
+	_rename_next = Bookmarks.add_folder(parent_id, tr("New folder"))
+
+
+## So a new folder from the + in the panel's header is named right away too.
+func name_new_folder(folder_id: String) -> void:
+	_rename_next = folder_id
+
+
+func _rename_folder_by_id(folder_id: String) -> void:
+	var stack: Array = [tree.get_root()]
+	while not stack.is_empty():
+		var at: TreeItem = stack.pop_back()
+		if at == null:
+			continue
+		if str(at.get_meta("folder_id", "")) == folder_id and at.get_meta("type", "") == "folder":
+			at.select(0)
+			tree.scroll_to_item(at)
+			_start_folder_rename(at)
+			return
+		stack.append_array(at.get_children())
+
+
+static var _plus: Texture2D = null
+
+## The + of a folder row, at the size of the text rather than of a toolbar button.
+static func _small_plus() -> Texture2D:
+	if _plus == null:
+		var image: Image = PLUS_ICON.get_image()
+		var side: int = int(ThemeLayout.font_size_sm * 1.1)
+		image.resize(side, side, Image.INTERPOLATE_LANCZOS)
+		_plus = ImageTexture.create_from_image(image)
+	return _plus

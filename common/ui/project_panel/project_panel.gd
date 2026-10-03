@@ -66,7 +66,8 @@ func _rebuild_explorer() -> void:
 	new_folder.theme_type_variation = "IconButton"
 	new_folder.icon = add_icon
 	new_folder.tooltip_text = tr("New folder")
-	new_folder.pressed.connect(func() -> void: Bookmarks.add_folder("", tr("New folder")))
+	new_folder.pressed.connect(func() -> void:
+		bookmarks.name_new_folder(Bookmarks.add_folder("", tr("New folder"))))
 	bookmarks_fc.add_title_bar_control(new_folder)
 
 	storylines_fc = _create_foldable_container("Storylines")
@@ -154,6 +155,12 @@ func _add_document_rows(
 
 		row.add_child(button)
 		storylines_container.add_child(row)
+		# drag it up into a collection (russian-monologue)
+		button.set_drag_forwarding(func(_at: Vector2) -> Variant:
+			var tag: Label = Label.new()
+			tag.text = button.text
+			button.set_drag_preview(tag)
+			return {"bookmark": {"kind": "storyline", "storyline": document.id}}, Callable(), Callable())
 		var renamer: InlineRename = InlineRename.attach(button)
 		renamer.committed.connect(_on_storyline_renamed.bind(document))
 		# right-click: rename, add to a collection, delete; Delete/⌫ deletes (russian-monologue)

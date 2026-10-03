@@ -61,7 +61,7 @@ static func set_open(id: String, is_open: bool) -> void:
 	if target.is_empty():
 		return
 	target["open"] = is_open
-	_save(data)
+	_save_quietly(data)
 
 
 static func add_item(folder_id: String, item: Dictionary) -> void:
@@ -142,8 +142,16 @@ static func _save(tree_data: Array) -> void:
 			.default([])
 			.hidden_in_inspector()
 		)
-	prop.set_value(tree_data.duplicate(true))
+	# through the settings' history, so Cmd+Z takes it back; the panel hears it either way
+	project.settings.set_property_value(SETTING, tree_data.duplicate(true))
 	EventBus.bookmarks_changed.emit()
+
+
+## For what is not worth an undo step, such as a folder folded or unfolded.
+static func _save_quietly(tree_data: Array) -> void:
+	var project: MonologueProject = ProjectManager.current_project
+	if project and project.settings and project.settings.get_property(SETTING):
+		project.settings.get_property(SETTING).set_value(tree_data.duplicate(true))
 
 
 static func _find_folder_recursive(folders: Array, target_id: String) -> Dictionary:
