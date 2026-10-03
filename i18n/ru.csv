@@ -306,7 +306,7 @@ General,Общее
 Advanced,Дополнительно
 Default,По умолчанию
 Empty,Пусто
-Extra,Дополнительно
+Extra,Прочее
 Special,Особое
 Special:,Особое:
 Preview,Предпросмотр
@@ -527,6 +527,9 @@ Thank you very much for using Monologue!","[center][b]Russian Monologue[/b][/cen
 Спасибо, что пользуетесь!"
 pass,да
 fail,нет
+one_shot,скрыть после выбора
+enable_condition,с условием
+description,описание
 port context,ход
 port text,текст
 port character,персонаж

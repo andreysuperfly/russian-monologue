@@ -370,7 +370,7 @@ func _create_property_editor(
 			var p_label: Label = Label.new()
 			p_label.clip_text = true
 			p_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			p_label.text = property.name
+			p_label.text = _label_of(property)
 			p_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS_FORCE
 			p_label_row.add_child(p_label)
 
@@ -407,7 +407,7 @@ func _create_property_editor(
 			var p_label: Label = Label.new()
 			p_label.clip_text = true
 			p_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			p_label.text = property.name
+			p_label.text = _label_of(property)
 			p_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS_FORCE
 			p_left_container.add_child(p_label)
 
@@ -501,3 +501,9 @@ func _on_back_button_pressed() -> void:
 	var previous: Array[InspectableObject] = []
 	previous.assign(history.pop_back())
 	inspect(previous, true)
+
+
+## The field's own name, or the label it was given with .label() (russian-monologue).
+static func _label_of(property: Property) -> String:
+	var custom: String = str(property.get_settings_value(PropertySettings.KEY_LABEL, ""))
+	return custom if not custom.is_empty() else property.name

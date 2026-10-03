@@ -447,7 +447,8 @@ func get_settings_value(key: String, fallback: Variant = null) -> Variant:
 
 func get_display_name() -> String:
 	var custom_label: String = get_settings_value(PropertySettings.KEY_LABEL, "")
-	return Util.to_readable_name(custom_label if not custom_label.is_empty() else name)
+	# a label is written the way it should read; only a bare name is made readable
+	return custom_label if not custom_label.is_empty() else Util.to_readable_name(name)
 
 
 func get_category() -> String:
