@@ -25,7 +25,8 @@ func initialize_properties() -> void:
 	# what the flag means, in the writer's words: cards say this instead of the name (russian-monologue)
 	define_property(Property.new("human")
 		.label("In plain words")
-		.set_type("text"))
+		.set_type("text")
+		.plain())
 
 	define_property(Property.new("extra/description")
 		.set_type("textarea"))

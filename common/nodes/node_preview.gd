@@ -171,7 +171,7 @@ static func human(project: MonologueProject, variable_id: String) -> String:
 		return ""
 	for record: Variant in project.get_collection_value("variables"):
 		if record is Dictionary and str((record as Dictionary).get("id", "")) == variable_id:
-			return str((record as Dictionary).get("human", "")).strip_edges()
+			return Util.to_label((record as Dictionary).get("human", ""))
 	return ""
 
 
