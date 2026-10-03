@@ -33,6 +33,14 @@ var answer: String = ""
 ## What the game answered the last waiting `action` with, under "value".
 var _action_answer: Dictionary = {}
 
+## Replays a path (russian-monologue): called with (kind, options) for every "say" / "offer" /
+## "ask"; returns the answer to give at once — the option key, the typed text, true for a line —
+## or null to wait for the reader. What the editor's Run window uses to fast-forward after an edit.
+var autopilot: Callable
+## Every answer, as it is given: (kind, value). How a path gets recorded for the autopilot.
+signal request_answered(kind: String, value: Variant)
+var _kind: String = ""
+
 ## True between a question and its answer. A click landing on a line still on screen while
 ## another node holds the story is not an answer.
 var asking: bool = false
@@ -66,6 +74,9 @@ func say(
 		sound.play_voice(resolve(voice))
 
 	asking = true
+	_kind = "say"
+	if _autopilot_answers("say", null):
+		return
 	if text_box == null:
 		_answer()
 		return
@@ -76,6 +87,9 @@ func say(
 ## by the behaviour. The answer lands in [member picked].
 func offer(options: Array[Dictionary]) -> void:
 	asking = true
+	_kind = "offer"
+	if _autopilot_answers("offer", options):
+		return
 	if choices == null:
 		picked = str(options[0]["key"]) if not options.is_empty() else ""
 		_answer()
@@ -86,6 +100,9 @@ func offer(options: Array[Dictionary]) -> void:
 ## The answer lands in [member answer].
 func ask(prompt: String, placeholder: String = "", allow_empty: bool = false) -> void:
 	asking = true
+	_kind = "ask"
+	if _autopilot_answers("ask", null):
+		return
 	if text_box == null:
 		answer = ""
 		_answer()
@@ -96,6 +113,9 @@ func ask(prompt: String, placeholder: String = "", allow_empty: bool = false) ->
 ## Waits for the reader to move on without putting anything new on screen.
 func acknowledge() -> void:
 	asking = true
+	_kind = "press"
+	if _autopilot_answers("press", null):
+		return
 	if text_box == null:
 		_answer()
 
@@ -159,4 +179,29 @@ func _answer() -> void:
 	if not asking:
 		return
 	asking = false
+	match _kind:
+		"offer": request_answered.emit("offer", picked)
+		"ask": request_answered.emit("ask", answer)
+		"say": request_answered.emit("say", true)
+		"press": request_answered.emit("press", true)
+	_kind = ""
 	answered.emit()
+
+
+## The autopilot answered for the reader: nothing goes on screen, the story moves on.
+func _autopilot_answers(kind: String, options: Variant) -> bool:
+	if not autopilot.is_valid():
+		return false
+	var given: Variant = autopilot.call(kind, options)
+	if given == null:
+		return false
+	match kind:
+		"offer": picked = str(given)
+		"ask": answer = str(given)
+	if text_box:
+		text_box.clear()
+	if choices:
+		choices.clear()
+	# On the next frame: the behaviour that asked is still setting up its wait.
+	_answer.call_deferred()
+	return true

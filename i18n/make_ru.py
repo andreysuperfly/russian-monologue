@@ -41,6 +41,13 @@ T = {
 "All of them (AND)":"Все (И)","Any of them (OR)":"Любое (ИЛИ)","How the checks combine.":"Как сочетаются условия.",
 "Remove this check.":"Убрать это условие.","Turn this check around: true becomes false.":"Перевернуть: «да» становится «нет».",
 "⚠ Missing (%s)":"⚠ Нет такого (%s)","test":"условие",
+# --- окно проигрывания (russian-monologue) ---
+"Run":"Проигрывание","State":"Состояние","Variables":"Переменные","Pockets":"Карманы","Passed":"Пройдено","empty":"пусто",
+"Restart from the top":"Начать сначала","%d nodes, %d answers recorded":"узлов: %d, ответов записано: %d",
+"Changes here last for this run only. The project is not touched.":"Изменения здесь — только на этот прогон. Проект не меняется.",
+"Back where you were.":"Вернулись туда, где вы были.","The edit changed the story here; carry on yourself.":"Правка изменила историю здесь — дальше сами.",
+"That answer is gone after the edit; pick again.":"После правки этого ответа нет — выберите заново.","Edited — replaying your path…":"Правка — проматываю ваш путь…",
+"Set by hand: %s":"Задано вручную: %s","The story stopped.":"История закончилась.",
 # --- разделы проекта ---
 "Storyline":"Сюжетная линия","Storylines":"Сюжетные линии","Characters":"Персонажи","Character":"Персонаж","Locations":"Места","Location":"Место",
 "Variables":"Переменные","Variable":"Переменная","Items":"Предметы","Inventory":"Инвентарь","Collections":"Коллекции","Collection":"Коллекция",
