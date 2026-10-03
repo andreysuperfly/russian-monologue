@@ -76,6 +76,9 @@ T = {
 "nowhere":"никуда","start":"начало","IF":"ЕСЛИ","pockets":"карманы","Give":"Дать","Take":"Забрать","Set":"Задать","Storyline":"Сюжетная линия","Jump":"Переход","Section":"Раздел","Action":"Действие",
 "Screenplay":"Сценарий",
 "Show Pictures":"Показывать картинки","Small faces and item icons beside names: on cards, in lists and pickers.":"Маленькие лица и иконки вещей рядом с именами: на карточках, в списках и выпадающих меню.",
+"Load this project's add-ons?":"Загрузить дополнения этого проекта?",
+"This project brings its own node types: %s.\nAn add-on is code that runs inside Monologue. Load it only if you trust where the project came from.\n\n%s":"Проект приносит свои узлы: %s.\nДополнение — это код, который работает внутри Monologue. Загружайте, только если доверяете источнику проекта.\n\n%s",
+"Load":"Загрузить","Don't load":"Не загружать","Add-ons not loaded: %s":"Дополнения не загружены: %s","Add-on loaded: %s":"Дополнение загружено: %s",
 # --- разделы проекта ---
 "Storyline":"Сюжетная линия","Storylines":"Сюжетные линии","Characters":"Персонажи","Character":"Персонаж","Locations":"Места","Location":"Место",
 "Variables":"Переменные","Variable":"Переменная","Items":"Предметы","Inventory":"Инвентарь","Collections":"Коллекции","Collection":"Коллекция",

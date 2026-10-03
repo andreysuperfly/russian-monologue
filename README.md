@@ -12,6 +12,8 @@
 - Карточки схемы читаются без открытия (реплика целиком), узел «Заметка» — цветной стикер. / Readable cards, sticky Note node.
 - Шаблоны: выделить узлы → «Сохранить как шаблон…», вставить через «Добавить → Шаблоны». / Templates with their wires.
 - «Файл → Экспорт сценария (текст)…» — весь проект как сценарий для чтения. / Export the whole project as a readable script.
+- Картинки рядом с именами: лица персонажей и иконки вещей на карточках, в списках и меню; «Вид → Показывать картинки». / Faces and item icons beside names; View → Show Pictures.
+- Дополнения проекта: папка `monologue-plugins/<имя>/plugin.gd` рядом с файлом `.mnlp` добавляет свои узлы только этому проекту (при первом открытии Monologue спросит, доверять ли). Так узлы игры живут в игре, а не в этом репозитории. / Project add-ons: `monologue-plugins/<name>/plugin.gd` beside the `.mnlp` adds node types for that project only, after asking once. See `common/plugins/project_plugins.gd`.
 - Группы сюжетных линий слева («Группа · Название»), открытие `.mnlp` при запуске. / Grouped storylines, open a file on startup.
 
 Перевод: таблица `i18n/make_ru.py` → `i18n/ru.csv` (английский текст — ключ). Translations live in `i18n/`.

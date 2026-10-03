@@ -263,6 +263,18 @@ Action,Действие
 Screenplay,Сценарий
 Show Pictures,Показывать картинки
 "Small faces and item icons beside names: on cards, in lists and pickers.","Маленькие лица и иконки вещей рядом с именами: на карточках, в списках и выпадающих меню."
+Load this project's add-ons?,Загрузить дополнения этого проекта?
+"This project brings its own node types: %s.
+An add-on is code that runs inside Monologue. Load it only if you trust where the project came from.
+
+%s","Проект приносит свои узлы: %s.
+Дополнение — это код, который работает внутри Monologue. Загружайте, только если доверяете источнику проекта.
+
+%s"
+Load,Загрузить
+Don't load,Не загружать
+Add-ons not loaded: %s,Дополнения не загружены: %s
+Add-on loaded: %s,Дополнение загружено: %s
 Storylines,Сюжетные линии
 Characters,Персонажи
 Character,Персонаж

@@ -41,6 +41,8 @@ func load_project(project: MonologueProject) -> void:
 		return
 
 	Log.info("Project loaded!")
+	if project.project_path.is_empty():
+		ProjectPlugins.unload()  # a new project starts with Monologue's own types only
 	current_project = project
 	project_loaded.emit.call_deferred()
 	EventBus.hide_welcome.emit()
@@ -58,6 +60,8 @@ func save_project(project: MonologueProject) -> void:
 ## Opens a project from an archive, from the folder an unpacked one lives in, or from any
 ## file inside that folder, since that is what a file dialog lets the user point at.
 func load_project_from_path(path: String) -> void:
+	# the project's own add-ons first: its nodes cannot be read without their types
+	await ProjectPlugins.prepare(path)
 	var new_project: MonologueProject = await MonologueProject.from_path(path)
 	if not new_project:
 		Log.error("Can't load project from '%s'." % path)
