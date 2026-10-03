@@ -11,7 +11,7 @@ func _build_menu() -> void:
 
 
 func _on_report_a_bug() -> void:
-	OS.shell_open("https://github.com/monologue-tool/monologue/issues/new?template=BUG-REPORT.yml")
+	OS.shell_open("https://github.com/andreysuperfly/russian-monologue/issues/new")
 
 
 func _on_save_system_info() -> void:

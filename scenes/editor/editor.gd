@@ -23,6 +23,7 @@ func _ready() -> void:
 	EventBus.add_graph_node.connect(add_node_from_global)
 	EventBus.select_new_node.connect(_select_new_node)
 	EventBus.test_trigger.connect(test_project)
+	_keep_clear_of_window_buttons()
 
 	var args: PackedStringArray = OS.get_cmdline_args() + OS.get_cmdline_user_args()
 	var to_open: String = ""
@@ -187,3 +188,22 @@ func _on_window_drop_file(paths: PackedStringArray) -> void:
 		return
 
 	ProjectManager.load_project_from_path(path)
+
+
+## macOS draws its red/yellow/green buttons over the top bar (the window extends into the title),
+## so the menus start after them; gone in full screen, where the buttons are (russian-monologue).
+func _keep_clear_of_window_buttons() -> void:
+	var bar: HBoxContainer = get_node_or_null("VBox/Header/HBoxContainer")
+	if bar == null:
+		return
+	var gap: Control = Control.new()
+	gap.name = "WindowButtonsGap"
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.add_child(gap)
+	bar.move_child(gap, 0)
+	var fit: Callable = func() -> void:
+		var margins: Vector3i = DisplayServer.window_get_safe_title_margins()
+		gap.custom_minimum_size.x = margins.x / maxf(get_window().content_scale_factor, 1.0)
+		gap.visible = margins.x > 0
+	fit.call()
+	get_tree().root.size_changed.connect(fit)

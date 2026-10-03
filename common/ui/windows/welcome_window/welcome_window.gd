@@ -57,8 +57,8 @@ func load_callback(path: String) -> void:
 
 
 func _on_github_btn_pressed() -> void:
-	OS.shell_open("https://github.com/monologue-tool/monologue")
+	OS.shell_open("https://github.com/andreysuperfly/russian-monologue")
 
 
 func _on_bug_report_btn_pressed() -> void:
-	OS.shell_open("https://github.com/monologue-tool/monologue/issues/new?template=BUG-REPORT.yml")
+	OS.shell_open("https://github.com/andreysuperfly/russian-monologue/issues/new")
