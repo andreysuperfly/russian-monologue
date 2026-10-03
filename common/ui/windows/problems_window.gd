@@ -21,6 +21,21 @@ var _path_target: OptionButton
 var _paths: Tree
 
 
+var _tabs: TabContainer
+
+
+## Opens straight on «Where used» for one character, item or variable (russian-monologue):
+## clicking a name in a collection list comes here.
+static func show_usages(parent: Node, target_id: String) -> void:
+	open_for(parent)
+	_instance._tabs.current_tab = 1
+	for index: int in _instance._usage_target.item_count:
+		if str(_instance._usage_target.get_item_metadata(index)) == target_id:
+			_instance._usage_target.select(index)
+			_instance._fill_usages()
+			return
+
+
 static func open_for(parent: Node) -> void:
 	if _instance == null or not is_instance_valid(_instance):
 		_instance = ProblemsWindow.new()
@@ -39,6 +54,7 @@ func _init() -> void:
 	background.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 	var tabs: TabContainer = TabContainer.new()
+	_tabs = tabs
 	background.add_child(tabs)
 
 	# --- problems ---
@@ -347,10 +363,41 @@ func _fill_usages() -> void:
 		return
 	var target: String = str(_usage_target.get_item_metadata(_usage_target.selected))
 	var sites: Array[ReferenceSite] = project.get_object_registry().get_referrers(target)
+	# grouped by storyline, each place with what is said there (russian-monologue)
+	var groups: Dictionary = {}
+	var order: Array = []
 	for site: ReferenceSite in sites:
-		_add_row(root, [_where(project, site.owner_id, site.document_name), tr(site.property_name)], site.owner_id)
+		var found: Array = _find_node(project, site.owner_id)
+		var group: String = (found[0] as StorylineDocument).name if not found.is_empty() else tr("Collections")
+		if not groups.has(group):
+			groups[group] = []
+			order.append(group)
+		groups[group].append([site, found])
+	order.sort()
+	for group: String in order:
+		var head: TreeItem = _usages.create_item(root)
+		head.set_text(0, "%s  (%d)" % [group, groups[group].size()])
+		head.set_custom_color(0, Color(0.85, 0.85, 0.85))
+		head.set_metadata(0, "")
+		for entry: Array in groups[group]:
+			var site: ReferenceSite = entry[0]
+			var found: Array = entry[1]
+			var said: String = _said(project, found[1] as InspectableNode, site.owner_id) if not found.is_empty() else _where(project, site.owner_id, site.document_name)
+			_add_row(head, [said, tr(site.property_name)], site.owner_id)
 	if sites.is_empty():
 		_add_row(root, [tr("Not used anywhere."), ""], "")
+
+
+## What is said at a node: the line of a sentence, the text of an option, else the node's label.
+func _said(project: MonologueProject, node: InspectableNode, object_id: String) -> String:
+	var language: String = project.active_language_code
+	if node.get_type() == "sentence":
+		return NodePreview.trim(Util.to_label(node.get_property_value("line"), language), 110)
+	if node.get_type() == "choice":
+		for option: Variant in node.get_property_value("choices"):
+			if option is Dictionary and str(option.get("id", "")) == object_id:
+				return "» " + NodePreview.trim(Util.to_label(option.get("text", {}), language), 106)
+	return NodePreview.node_label(project, node.get_id())
 
 
 # ---------- path to an ending ----------

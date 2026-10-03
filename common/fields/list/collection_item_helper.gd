@@ -53,6 +53,16 @@ static func _make_item_row(
 	FieldWidgetFactory.bind_one(preview_prop, preview_field, item)
 	row.add_child(preview_field)
 
+	# a character, item or variable: a click on the name lists everywhere it is used (russian-monologue)
+	if item.get_type() in ["character", "item", "variable"]:
+		preview_field.mouse_filter = Control.MOUSE_FILTER_STOP
+		preview_field.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		preview_field.tooltip_text = owner.tr("Where used")
+		var item_id: String = str(item.get_property_value("id"))
+		preview_field.gui_input.connect(func(event: InputEvent) -> void:
+			if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+				ProblemsWindow.show_usages(owner.get_tree().root, item_id))
+
 	var edit_button: Button = Button.new()
 	edit_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	edit_button.icon = preload("res://ui/assets/icons/pen.svg")
