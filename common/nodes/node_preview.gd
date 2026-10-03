@@ -114,22 +114,54 @@ static func said(node: InspectableNode, property_name: String, language: String)
 
 ## A condition as it reads, such as "gold >= 3". Empty when it names no variable.
 static func condition(test: Variant) -> String:
-	if test is not Dictionary:
-		return ""
-
-	var check: Dictionary = test
 	var project: MonologueProject = ProjectManager.current_project
 	if project == null:
 		return ""
+	var parts: PackedStringArray = PackedStringArray()
+	for check: Dictionary in MonologueCondition.checks_of(test):
+		parts.append(_check_phrase(project, check))
+	var glue: String = " %s " % TranslationServer.translate("OR" if MonologueCondition.joins_with_or(test) else "AND")
+	return glue.join(parts)
 
-	var variable: String = ReferenceResolver.resolve_label(
-		project, "variables", str(check.get("variable", ""))
-	)
-	if variable.is_empty():
-		return ""
-	return "%s %s %s" % [
-		trim(variable), str(check.get("operator", "==")), literal(check.get("value"))
-	]
+
+## One check as a phrase (russian-monologue): «Детективность ≥ 12», «был в «Нюра» »,
+## «у Джиниуса есть «Кассета»», with «НЕ» in front when it is negated.
+static func _check_phrase(project: MonologueProject, check: Dictionary) -> String:
+	var op: String = str(check.get("operator", ">="))
+	var value: Variant = check.get("value", 1)
+	var phrase: String
+	match str(check.get("kind", "variable")):
+		"visited":
+			phrase = "%s «%s»" % [TranslationServer.translate("was at"), trim(node_label(project, str(check.get("node", ""))))]
+			if not (op == ">=" and int(value) == 1):
+				phrase += " %s %s" % [symbol(op), str(value)]
+		"item":
+			var who: String = ReferenceResolver.resolve_label(project, "characters", str(check.get("who", "")))
+			var item: String = ReferenceResolver.resolve_label(project, "items", str(check.get("item", "")))
+			phrase = "%s %s «%s»" % [trim(who), TranslationServer.translate("carries"), trim(item)]
+			if not (op == ">=" and int(value) == 1):
+				phrase += " %s %s" % [symbol(op), str(value)]
+		_:
+			var variable: String = ReferenceResolver.resolve_label(project, "variables", str(check.get("variable", "")))
+			phrase = "%s %s %s" % [trim(variable), symbol(str(check.get("operator", "=="))), literal(check.get("value"))]
+	if check.get("not", false) == true:
+		phrase = "%s %s" % [TranslationServer.translate("NOT"), phrase]
+	return phrase
+
+
+## Comparison signs as people write them.
+static func symbol(op: String) -> String:
+	return {">=": "≥", "<=": "≤", "!=": "≠", "==": "="}.get(op, op)
+
+
+## A node by its label, looked up across every storyline; its id when it has no label.
+static func node_label(project: MonologueProject, node_id: String) -> String:
+	for storyline: StorylineDocument in project.storylines:
+		var node: InspectableNode = storyline.get_node(node_id)
+		if node != null:
+			var label: String = str(node.get_property_value("label")) if node.get_property("label") != null else ""
+			return label if not label.is_empty() else node_id
+	return node_id
 
 
 ## A stored value as it would be written. A string in quotes, a boolean as a word.
@@ -137,7 +169,7 @@ static func literal(value: Variant) -> String:
 	if value is String:
 		return '"%s"' % trim(value)
 	if value is bool:
-		return "true" if value else "false"
+		return TranslationServer.translate("yes") if value else TranslationServer.translate("no")
 	return str(value)
 
 

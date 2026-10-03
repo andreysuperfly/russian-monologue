@@ -40,9 +40,7 @@ func _build_preview(_language: String = "") -> Control:
 ## A condition with no variable always takes the same branch, which makes the node a
 ## detour rather than a decision.
 func validate_object(result: ValidationResult, _context: ValidationContext) -> void:
-	var test: Variant = get_property_value("test")
-	var variable: String = str(test.get("variable", "")) if test is Dictionary else ""
-	if variable.is_empty():
+	if MonologueCondition.checks_of(get_property_value("test")).is_empty():
 		result.add(
 			ValidationIssue.warning(
 				"This condition tests nothing, so it always takes the same branch.",

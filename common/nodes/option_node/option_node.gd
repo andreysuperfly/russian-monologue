@@ -27,9 +27,7 @@ func validate_object(result: ValidationResult, _context: ValidationContext) -> v
 	if not get_property_value("enable_condition"):
 		return
 
-	var condition: Variant = get_property_value("condition")
-	var variable: String = str(condition.get("variable", "")) if condition is Dictionary else ""
-	if variable.is_empty():
+	if MonologueCondition.checks_of(get_property_value("condition")).is_empty():
 		result.add(
 			ValidationIssue.warning(
 				"This option's condition is enabled but empty, so it always shows.",

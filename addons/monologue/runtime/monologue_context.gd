@@ -172,15 +172,31 @@ func set_var(variable_id: String, of_value: Variant) -> void:
 
 
 func test(condition: Variant) -> bool:
-	if condition is not Dictionary:
+	var checks: Array = MonologueCondition.checks_of(condition)
+	if checks.is_empty():
 		return true
+	var any: bool = MonologueCondition.joins_with_or(condition)
+	for check: Dictionary in checks:
+		var ok: bool = _holds(check)
+		if any and ok:
+			return true
+		if not any and not ok:
+			return false
+	return not any
 
-	var check: Dictionary = condition
-	return MonologueCondition.holds(
-		get_var(str(check.get("variable", ""))),
-		str(check.get("operator", "==")),
-		check.get("value")
-	)
+
+## One check: a variable, how many times a node was passed, or how many of an item someone holds.
+func _holds(check: Dictionary) -> bool:
+	var operator: String = str(check.get("operator", ">="))
+	var result: bool
+	match str(check.get("kind", "variable")):
+		"visited":
+			result = MonologueCondition.holds(state.times_visited(str(check.get("node", ""))), operator, check.get("value", 1))
+		"item":
+			result = MonologueCondition.holds(state.held(str(check.get("who", "")), str(check.get("item", ""))), operator, check.get("value", 1))
+		_:
+			result = MonologueCondition.holds(get_var(str(check.get("variable", ""))), str(check.get("operator", "==")), check.get("value"))
+	return not result if check.get("not", false) == true else result
 
 
 func note(code: StringName, message: String) -> void:

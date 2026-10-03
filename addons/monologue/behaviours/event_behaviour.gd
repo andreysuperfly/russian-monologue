@@ -38,7 +38,7 @@ func step(ctx: MonologueContext) -> BehaviourResult:
 		# node, for the whole run.
 		if test is not Dictionary:
 			continue
-		if str((test as Dictionary).get("variable", "")).is_empty():
+		if MonologueCondition.checks_of(test).is_empty():
 			continue
 		if not watcher.test(test):
 			continue

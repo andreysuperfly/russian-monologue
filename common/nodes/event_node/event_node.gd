@@ -41,9 +41,7 @@ func _build_preview(_language: String = "") -> Control:
 
 ## An event with nothing to watch never fires, which is worth saying out loud.
 func validate_object(result: ValidationResult, _context: ValidationContext) -> void:
-	var test: Variant = get_property_value("test")
-	var variable: String = str(test.get("variable", "")) if test is Dictionary else ""
-	if variable.is_empty():
+	if MonologueCondition.checks_of(get_property_value("test")).is_empty():
 		result.add(
 			ValidationIssue.warning(
 				"This event watches no variable, so it never fires.", &"empty_event"

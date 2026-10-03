@@ -35,6 +35,12 @@ T = {
 "display_name":"показываемое имя","portrait":"портрет","portraits":"портреты","color":"цвет","aliases":"другие имена","once":"один раз",
 "text":"текст","character":"персонаж","option":"вариант","context":"поток","seconds":"секунды","action":"действие","operator":"оператор",
 "enabled":"включено","default":"по умолчанию","stackable":"складывается","max_stack":"макс. в стопке","price":"цена","persistent":"сохраняется",
+# --- условия фразой (russian-monologue) ---
+"Variable":"Переменная","Was at":"Был в узле","Carries":"В карманах","carries":"несёт","was at":"был в",
+"NOT":"НЕ","AND":"И","OR":"ИЛИ","yes":"да","no":"нет","+ Check":"+ Условие","Add one more check.":"Добавить ещё одно условие.",
+"All of them (AND)":"Все (И)","Any of them (OR)":"Любое (ИЛИ)","How the checks combine.":"Как сочетаются условия.",
+"Remove this check.":"Убрать это условие.","Turn this check around: true becomes false.":"Перевернуть: «да» становится «нет».",
+"⚠ Missing (%s)":"⚠ Нет такого (%s)","test":"условие",
 # --- разделы проекта ---
 "Storyline":"Сюжетная линия","Storylines":"Сюжетные линии","Characters":"Персонажи","Character":"Персонаж","Locations":"Места","Location":"Место",
 "Variables":"Переменные","Variable":"Переменная","Items":"Предметы","Inventory":"Инвентарь","Collections":"Коллекции","Collection":"Коллекция",

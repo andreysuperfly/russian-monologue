@@ -4,6 +4,35 @@ class_name MonologueCondition
 const FUZZY_THRESHOLD: float = 0.8
 
 
+## A condition is several checks joined by "and" / "or" (russian-monologue). The old single
+## check {"variable", "operator", "value"} still reads, as one check.
+##   {"join": "and" | "or", "checks": [
+##     {"kind": "variable", "variable": id, "operator": ">=", "value": 12, "not": false},
+##     {"kind": "visited", "node": id, "operator": ">=", "value": 1},
+##     {"kind": "item", "who": character id, "item": item id, "operator": ">=", "value": 1}]}
+## A check with nothing picked is left out, so a half-built condition never decides.
+static func checks_of(condition: Variant) -> Array:
+	if condition is not Dictionary:
+		return []
+	var found: Array = []
+	var raw: Array = condition.get("checks", []) if condition.has("checks") else [condition]
+	for check: Variant in raw:
+		if check is Dictionary and _is_complete(check):
+			found.append(check)
+	return found
+
+
+static func joins_with_or(condition: Variant) -> bool:
+	return condition is Dictionary and str(condition.get("join", "and")) == "or"
+
+
+static func _is_complete(check: Dictionary) -> bool:
+	match str(check.get("kind", "variable")):
+		"visited": return not str(check.get("node", "")).is_empty()
+		"item": return not str(check.get("who", "")).is_empty() and not str(check.get("item", "")).is_empty()
+	return not str(check.get("variable", "")).is_empty()
+
+
 static func holds(left: Variant, operator: String, right: Variant) -> bool:
 	match operator:
 		"==": return _same(left, right)
