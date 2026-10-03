@@ -3,6 +3,7 @@ class_name MonologueGraphEdit extends CustomGraphEdit
 const WIRE_REACH: float = 8.0
 const OFFER_EXTRACT: int = 0
 const OFFER_BRIDGE_OUT: int = 1
+const OFFER_TEMPLATE: int = 2
 
 signal node_view_selected(node: InspectableNode)
 signal selection_changed(nodes: Array[InspectableObject])
@@ -730,6 +731,7 @@ func _offer_on_selection(at_position: Vector2) -> void:
 	var menu: PopupMenu = PopupMenu.new()
 	menu.add_item("Extract into a Section", OFFER_EXTRACT)
 	menu.add_item("Remove, Keeping the Chain", OFFER_BRIDGE_OUT)
+	menu.add_item("Save as template…", OFFER_TEMPLATE)
 	menu.id_pressed.connect(_on_offer_chosen.bind(selection))
 	menu.popup_hide.connect(menu.queue_free)
 	add_child(menu)
@@ -743,6 +745,30 @@ func _on_offer_chosen(offer: int, selection: Array[InspectableNode]) -> void:
 		_extract_into_section(selection)
 	elif offer == OFFER_BRIDGE_OUT:
 		_remove_keeping_chain(selection)
+	elif offer == OFFER_TEMPLATE:
+		_ask_template_name(selection)
+
+
+## A small dialog for the template's name (russian-monologue); saved into the project.
+func _ask_template_name(selection: Array[InspectableNode]) -> void:
+	var dialog: ConfirmationDialog = ConfirmationDialog.new()
+	dialog.title = tr("Save as template…")
+	var name_edit: LineEdit = LineEdit.new()
+	name_edit.placeholder_text = tr("Template name")
+	name_edit.custom_minimum_size.x = 320
+	dialog.add_child(name_edit)
+	dialog.register_text_enter(name_edit)
+	dialog.confirmed.connect(func() -> void:
+		var template_name: String = name_edit.text.strip_edges()
+		if not template_name.is_empty():
+			GraphTemplates.save(ProjectManager.current_project, get_storyline(), selection, template_name)
+			Log.info(tr("Template saved: %s") % template_name))
+	dialog.visibility_changed.connect(func() -> void:
+		if not dialog.visible:
+			dialog.queue_free())
+	add_child(dialog)
+	dialog.popup_centered()
+	name_edit.grab_focus()
 
 
 ## Takes the nodes out and joins what fed them to what they fed. Asks first when a section

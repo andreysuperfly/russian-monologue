@@ -65,6 +65,13 @@ T = {
 "Note":"Заметка","Notes":"Заметки","note":"заметка","A sticky note for whoever writes the story. Has no wires and never plays.":"Стикер для автора. Без связей, в игре не проигрывается.",
 "What to remember here. Seen only in the editor.":"Что тут важно помнить. Видно только в редакторе.",
 "Yellow":"Жёлтый","Red":"Красный","Green":"Зелёный","Blue":"Синий","Grey":"Серый",
+"Route name":"Имя маршрута","Save route":"Сохранить маршрут","Check":"Пройти","Delete this route.":"Удалить маршрут.",
+"Keep the answers given so far under this name, in the project.":"Запомнить ответы под этим именем — в самом проекте.",
+"Replay the saved route and say whether it still gets through.":"Пройти сохранённый маршрут и сказать, проходит ли он ещё.",
+"Name the route first.":"Сначала назовите маршрут.","Route saved: %s":"Маршрут сохранён: %s","Checking route: %s…":"Проверяю маршрут: %s…",
+"Route «%s» gets through.":"Маршрут «%s» проходит.","Route «%s» breaks at step %d: %s":"Маршрут «%s» ломается на шаге %d: %s",
+"Route «%s» ends early, at step %d.":"Маршрут «%s» кончается раньше — на шаге %d.",
+"Save as template…":"Сохранить как шаблон…","Template name":"Имя шаблона","Template saved: %s":"Шаблон сохранён: %s","Templates":"Шаблоны",
 # --- разделы проекта ---
 "Storyline":"Сюжетная линия","Storylines":"Сюжетные линии","Characters":"Персонажи","Character":"Персонаж","Locations":"Места","Location":"Место",
 "Variables":"Переменные","Variable":"Переменная","Items":"Предметы","Inventory":"Инвентарь","Collections":"Коллекции","Collection":"Коллекция",

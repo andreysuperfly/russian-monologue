@@ -34,6 +34,11 @@ var _replay_at: int = -1
 var _overrides: Dictionary = {}
 var _replay_timer: Timer
 
+## Name of the saved route being checked, "" for a plain run.
+var _route_name: String = ""
+var _route_name_edit: LineEdit
+var _routes: OptionButton
+
 var _panel: PanelContainer
 var _state_box: VBoxContainer
 var _status: Label
@@ -90,7 +95,67 @@ func play(project: MonologueProject, storyline_id: String = "", node_id: String 
 		return
 
 	popup_centered()
+	_route_name = ""
+	_fill_routes()
 	runtime.start(storyline_id, node_id)
+	_refresh_state()
+
+
+# ---------- saved routes ----------
+
+func _saved() -> Dictionary:
+	if _project == null:
+		return {}
+	var value: Variant = _project.settings.get_property_value("journeys")
+	return (value as Dictionary).duplicate(true) if value is Dictionary else {}
+
+
+func _fill_routes() -> void:
+	_routes.clear()
+	var names: Array = _saved().keys()
+	names.sort()
+	for route: String in names:
+		_routes.add_item(route)
+
+
+func _save_route() -> void:
+	var route: String = _route_name_edit.text.strip_edges()
+	if route.is_empty() or _project == null:
+		_set_status("Name the route first.")
+		return
+	var routes: Dictionary = _saved()
+	routes[route] = {"storyline": _storyline_id, "node": _node_id, "steps": _journey.duplicate(true)}
+	_project.settings.get_property("journeys").set_value(routes)
+	_fill_routes()
+	_set_status(tr("Route saved: %s") % route)
+
+
+func _delete_route() -> void:
+	if _routes.selected < 0 or _project == null:
+		return
+	var routes: Dictionary = _saved()
+	routes.erase(_routes.get_item_text(_routes.selected))
+	_project.settings.get_property("journeys").set_value(routes)
+	_fill_routes()
+
+
+## Replays a saved route from its start; the status says whether it still gets through.
+func _check_route() -> void:
+	if _routes.selected < 0 or _project == null:
+		return
+	var route: String = _routes.get_item_text(_routes.selected)
+	var saved: Dictionary = _saved().get(route, {})
+	runtime.stop()
+	if not runtime.load_documents(ProjectWriter.documents_of(_project)):
+		_set_status("This story cannot be played; see the problems above.")
+		return
+	_storyline_id = str(saved.get("storyline", ""))
+	_node_id = str(saved.get("node", ""))
+	_journey = (saved.get("steps", []) as Array).duplicate(true)
+	_route_name = route
+	_replay_at = 0 if not _journey.is_empty() else -1
+	_set_status(tr("Checking route: %s…") % route)
+	runtime.start(_storyline_id, _node_id)
 	_refresh_state()
 
 
@@ -108,7 +173,7 @@ func _autopilot(kind: String, options: Variant) -> Variant:
 	if _replay_at < 0:
 		return null
 	if _replay_at >= _journey.size():
-		_stop_replay("Back where you were.")
+		_stop_replay(tr("Route «%s» gets through.") % _route_name if not _route_name.is_empty() else "Back where you were.")
 		return null
 	var step: Dictionary = _journey[_replay_at]
 	if str(step.get("kind")) != kind:
@@ -126,9 +191,12 @@ func _autopilot(kind: String, options: Variant) -> Variant:
 
 
 func _stop_replay(why: String) -> void:
+	if not _route_name.is_empty() and _replay_at < _journey.size():
+		why = tr("Route «%s» breaks at step %d: %s") % [_route_name, _replay_at + 1, tr(why)]
 	# What came after the point the edit changed no longer belongs to this path.
 	_journey.resize(clampi(_replay_at, 0, _journey.size()))
 	_replay_at = -1
+	_route_name = ""
 	_set_status(why)
 
 
@@ -192,6 +260,37 @@ func _build_panel() -> void:
 		if _project:
 			play(_project, _storyline_id, _node_id))
 	column.add_child(restart)
+
+	# saved routes: record this path under a name, check one later
+	var save_row: HBoxContainer = HBoxContainer.new()
+	_route_name_edit = LineEdit.new()
+	_route_name_edit.placeholder_text = "Route name"
+	_route_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	save_row.add_child(_route_name_edit)
+	var save: Button = Button.new()
+	save.text = "Save route"
+	save.tooltip_text = "Keep the answers given so far under this name, in the project."
+	save.pressed.connect(_save_route)
+	save_row.add_child(save)
+	column.add_child(save_row)
+	var play_row: HBoxContainer = HBoxContainer.new()
+	_routes = OptionButton.new()
+	_routes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_routes.clip_text = true
+	_routes.fit_to_longest_item = false
+	play_row.add_child(_routes)
+	var check: Button = Button.new()
+	check.text = "Check"
+	check.tooltip_text = "Replay the saved route and say whether it still gets through."
+	check.pressed.connect(_check_route)
+	play_row.add_child(check)
+	var forget: Button = Button.new()
+	forget.text = "✕"
+	forget.tooltip_text = "Delete this route."
+	forget.pressed.connect(_delete_route)
+	play_row.add_child(forget)
+	column.add_child(play_row)
+
 	_state_box = VBoxContainer.new()
 	column.add_child(_state_box)
 	# Above the player, which draws on its own canvas layer.
@@ -308,6 +407,14 @@ func _apply_overrides() -> void:
 
 func _on_story_ended(reason: String) -> void:
 	Log.info("The story stopped: %s." % reason)
+	if not _route_name.is_empty():
+		var reached: int = _replay_at
+		var finished: bool = reached < 0 or reached >= _journey.size()
+		_replay_at = -1
+		_set_status(tr("Route «%s» gets through.") % _route_name if finished else tr("Route «%s» ends early, at step %d.") % [_route_name, reached + 1])
+		_route_name = ""
+		_refresh_state()
+		return
 	_replay_at = -1
 	_set_status("The story stopped.")
 	_refresh_state()
