@@ -14,7 +14,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
-config/name="Monologue"
+config/name="Russian Monologue"
 config/description="Dialogue Editor for Narrative Games"
 config/version="3.0.0-beta2"
 config/tags=PackedStringArray("monologue")

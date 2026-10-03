@@ -140,7 +140,7 @@ func _on_close_project_dialog_response(response: int) -> void:
 
 func _update_window_title() -> void:
 	var base_title: String = (
-		"Monologue %s" % ProjectSettings.get_setting("application/config/version")
+		"Russian Monologue %s" % ProjectSettings.get_setting("application/config/version")
 	)
 
 	if not current_project:
