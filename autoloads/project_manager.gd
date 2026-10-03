@@ -9,6 +9,12 @@ var current_project: MonologueProject
 var _cancel_close: bool = false
 
 
+## A project's add-ons are scripts read from disk; let them go while the engine is still whole.
+## Held on to until the very end, they took Godot down with them on quit (russian-monologue).
+func _exit_tree() -> void:
+	ProjectPlugins.unload()
+
+
 func _ready() -> void:
 	EventBus.load_project.connect(load_project_from_path)
 

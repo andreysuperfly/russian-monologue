@@ -525,6 +525,8 @@ Thank you very much for using Monologue!","[center][b]Russian Monologue[/b][/cen
 Нашли ошибку — напишите о ней на [url=https://github.com/andreysuperfly/russian-monologue/issues]GitHub[/url].
 
 Спасибо, что пользуетесь!"
+pass,да
+fail,нет
 port context,ход
 port text,текст
 port character,персонаж

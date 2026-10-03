@@ -204,8 +204,10 @@ static func _build_rows(node: InspectableNode) -> Array[GraphNodeRow]:
 static func _build_property_row(prop: Property, owner: InspectableNode) -> GraphNodeRow:
 	var enable_left: bool = prop.get_settings_value("exposed", false) == true
 	var enable_right: bool = prop.get_settings_value("export", false) == true
+	# a label given with .label() is how the field wants to be called, here too (russian-monologue)
+	var has_label: bool = not str(prop.get_settings_value(PropertySettings.KEY_LABEL, "")).is_empty()
 	var label: String = (
-		prop.get_display_name() if prop.get_settings_value("is_main_property") else prop.name
+		prop.get_display_name() if prop.get_settings_value("is_main_property") or has_label else prop.name
 	)
 	# A collection port accepts whatever its items' main property exports, so that an
 	# option node can be plugged into a choice node's option list.
