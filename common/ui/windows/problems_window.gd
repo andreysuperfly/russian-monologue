@@ -263,12 +263,30 @@ func _translated(message: String) -> String:
 func _extra_checks(project: MonologueProject) -> Array:
 	var found: Array = []
 	var registry: ProjectObjectRegistry = project.get_object_registry()
+	# what add-on fields read and write (e.g. a game's "gives" on an option), by record id
+	var extra_reads: Dictionary = {}
+	var extra_writes: Dictionary = {}
+	var plugins: Array[MonologuePlugin] = MonologueRegistry.get_instance().get_installed_plugins()
+	var count_usage: Callable = func(object: InspectableObject) -> void:
+		for plugin: MonologuePlugin in plugins:
+			var report: Dictionary = plugin.usage(object)
+			for id: Variant in report.get("reads", []):
+				extra_reads[str(id)] = int(extra_reads.get(str(id), 0)) + 1
+			for id: Variant in report.get("writes", []):
+				extra_writes[str(id)] = int(extra_writes.get(str(id), 0)) + 1
+	for storyline: StorylineDocument in project.storylines:
+		for node: InspectableNode in storyline.nodes:
+			count_usage.call(node)
+			for children: Variant in node.get_all_property_children():
+				for child: Variant in children:
+					if child is InspectableObject:
+						count_usage.call(child)
 	for record: Variant in project.get_collection_value("variables"):
 		if record is not Dictionary:
 			continue
 		var id: String = str(record.get("id", ""))
-		var writes: int = 0
-		var reads: int = 0
+		var writes: int = int(extra_writes.get(id, 0))
+		var reads: int = int(extra_reads.get(id, 0))
 		for site: ReferenceSite in registry.get_referrers(id):
 			var owner: InspectableObject = registry.get_object(site.owner_id)
 			if owner is InspectableNode and (owner as InspectableNode).get_type() in WRITERS:
@@ -286,8 +304,8 @@ func _extra_checks(project: MonologueProject) -> Array:
 		if record is not Dictionary:
 			continue
 		var id: String = str(record.get("id", ""))
-		var given: int = 0
-		var checked: int = 0
+		var given: int = int(extra_writes.get(id, 0))
+		var checked: int = int(extra_reads.get(id, 0))
 		for site: ReferenceSite in registry.get_referrers(id):
 			var owner: InspectableObject = registry.get_object(site.owner_id)
 			if owner is InspectableNode and (owner as InspectableNode).get_type() == "inventory":

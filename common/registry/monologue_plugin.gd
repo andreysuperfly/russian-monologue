@@ -25,6 +25,13 @@ func get_plugin_version() -> String:
 @abstract func register(registry: MonologueRegistry) -> void
 
 
+## What [param object] reads and writes through this add-on's own fields, as Monologue record ids:
+## {"reads": [...], "writes": [...]}. The Problems window counts these too, so a variable an
+## add-on field changes is not reported as never changed (russian-monologue).
+func usage(_object: InspectableObject) -> Dictionary:
+	return {}
+
+
 ## Called on uninstall. Types registered through [param registry] are removed automatically.
 ## Override only for extra teardown.
 func unregister(_registry: MonologueRegistry) -> void:

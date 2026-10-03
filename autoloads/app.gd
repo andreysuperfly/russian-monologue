@@ -9,6 +9,7 @@ const SCALES: Array[String] = ["75%", "85%", "100%", "110%", "125%", "150%", "17
 
 func _ready() -> void:
 	_add_scale_shortcuts()
+	get_tree().node_added.connect(_on_node_added)
 	# deferred: the size picked in Preferences is only known once ConfigManager has loaded
 	_update_window.call_deferred(get_window(), true)
 	get_window().size_changed.connect(_on_window_size_changed)
@@ -50,6 +51,40 @@ func user_scale() -> float:
 
 func apply_ui_scale() -> void:
 	_update_window(get_window())
+	for window: Window in _separate_windows:
+		if is_instance_valid(window):
+			window.content_scale_factor = get_window().content_scale_factor
+
+
+# ---------- windows of their own (russian-monologue) ----------
+# A window opened outside the main one (problems, run, localization…) used to keep scale 1 and
+# came up half size on a retina screen. It now takes the main window's scale, and its size too.
+
+var _separate_windows: Array[Window] = []
+
+
+func _on_node_added(node: Node) -> void:
+	if node is Window and node != get_window():
+		_take_scale.call_deferred(node)
+
+
+func _take_scale(window: Window) -> void:
+	if not is_instance_valid(window) or window.is_embedded():
+		return
+	var factor: float = get_window().content_scale_factor
+	window.content_scale_factor = factor
+	_separate_windows = _separate_windows.filter(func(w: Window) -> bool: return is_instance_valid(w))
+	_separate_windows.append(window)
+	# its sizes were written in points of a scale-1 screen: grow it once, the first time it shows
+	var grow: Callable = func() -> void:
+		if not window.visible or window.has_meta(&"scaled"):
+			return
+		window.set_meta(&"scaled", true)
+		window.min_size = Vector2i(Vector2(window.min_size) * factor)
+		window.size = Vector2i(Vector2(window.size) * factor)
+		window.move_to_center()
+	window.visibility_changed.connect(grow)
+	grow.call()
 
 
 ## One size up or down the list in [constant SCALES].
