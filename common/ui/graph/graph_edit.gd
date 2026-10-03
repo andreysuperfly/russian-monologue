@@ -134,6 +134,9 @@ func add_graph_node_view(node: InspectableNode) -> GraphNode:
 	if node is SectionNode and not graph_node.gui_input.is_connected(_on_section_view_input):
 		graph_node.gui_input.connect(_on_section_view_input.bind(node))
 
+	if node.get_type() == "sentence":
+		graph_node.gui_input.connect(_on_sentence_view_input.bind(graph_node, node))
+
 	add_child(graph_node)
 	if not node.property_changed.is_connected(_on_inspectable_node_property_changed):
 		node.property_changed.connect(_on_inspectable_node_property_changed.bind(node))
@@ -158,6 +161,15 @@ func _on_section_view_input(event: InputEvent, node: InspectableNode) -> void:
 	# the event here means opening a section does not also pick it up and carry it.
 	accept_event()
 	EventBus.request_storyline_inspection.emit.call_deferred(section)
+
+
+## Double-click a line's card to write the line right there (russian-monologue).
+func _on_sentence_view_input(event: InputEvent, graph_node: GraphNode, node: InspectableNode) -> void:
+	var click: InputEventMouseButton = event as InputEventMouseButton
+	if click == null or not click.double_click or click.button_index != MOUSE_BUTTON_LEFT:
+		return
+	accept_event()
+	CardTextEditor.open.call_deferred(graph_node, node)
 
 
 func _on_inspectable_node_property_changed(property_name: String, node: InspectableNode) -> void:
