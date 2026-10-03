@@ -26,6 +26,7 @@ var _announced_selection: Array[StringName] = []
 
 func _ready() -> void:
 	super._ready()
+	_use_scalable_font()
 	connection_request.connect(_on_connection_request)
 	connection_to_empty.connect(_on_connection_to_empty)
 	copy_nodes_request.connect(_on_copy_nodes_request)
@@ -988,3 +989,19 @@ func _add_jump_link(from_node: InspectableNode, from_property: String, to_node: 
 		set_selected(target_view)
 		scroll_offset = target_view.position_offset * zoom - size / 2.0 + target_view.size * zoom / 2.0)
 	from_node.graph_view.add_child(link)
+
+
+## Text on the cards drawn from a distance field (russian-monologue): it stays sharp at any
+## zoom, where a plain font is a picture of letters stretched with the canvas. The GPU does
+## the work; each glyph is prepared once. Only the graph: panels keep the hinted font.
+func _use_scalable_font() -> void:
+	var source: FontFile = load("res://ui/assets/fonts/sources/Inter-Regular.ttf").duplicate()
+	source.multichannel_signed_distance_field = true
+	source.msdf_pixel_range = 16
+	source.msdf_size = 64
+	var font: FontVariation = FontVariation.new()
+	font.base_font = source
+	font.fallbacks = ThemeLayout.font_main.fallbacks
+	var scalable: Theme = Theme.new()
+	scalable.default_font = font
+	theme = scalable

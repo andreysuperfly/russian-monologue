@@ -67,9 +67,12 @@ func _finish(keep: bool) -> void:
 	var graph_node: Node = get_parent()
 	if is_instance_valid(_preview):
 		_preview.show()
+	# out of the card before it is measured again, so the card shrinks back to its usual size
+	if graph_node:
+		graph_node.remove_child.call_deferred(self)
 	queue_free()
 	if graph_node is GraphNode:
-		(graph_node as GraphNode).reset_size.call_deferred()
+		_shrink.call_deferred(graph_node as GraphNode)
 	if not keep or not is_instance_valid(_node):
 		return
 	var stored: Variant = _node.get_property_value(PROPERTY)
@@ -80,6 +83,12 @@ func _finish(keep: bool) -> void:
 		value = (stored as Dictionary).duplicate()
 		value[_language()] = typed
 	_node.set_property_value(PROPERTY, value)
+
+
+static func _shrink(graph_node: GraphNode) -> void:
+	if is_instance_valid(graph_node):
+		graph_node.size = Vector2.ZERO
+		graph_node.reset_size()
 
 
 static func _language() -> String:
