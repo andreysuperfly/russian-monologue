@@ -233,6 +233,53 @@ T = {
 "[center][b]Monologue Preview[/b][/center]\n\nMonologue is in preview. If you encounter any bugs or issues, please report them on [url=https://github.com/atomic-junky/Monologue/]GitHub[/url] by creating an issue.\n\nThank you very much for using Monologue!":
 "[center][b]Monologue — предварительная версия[/b][/center]\n\nMonologue ещё в разработке. Если найдёте ошибку, сообщите о ней на [url=https://github.com/atomic-junky/Monologue/]GitHub[/url].\n\nСпасибо, что пользуетесь Monologue!",
 }
+
+# --- как говорят по-русски (вычитка 2026-10-03): поверх строк выше ---
+T.update({
+# решено с автором: «Начало», «Инвентарь», «Проверка истории», короткие подписи связей
+"Root":"Начало","start":"начало",
+"Pockets":"Инвентарь","pockets":"инвентарь","Carries":"В инвентаре","carries":"имеет в инвентаре",
+"Whose pockets this is about. Everyone carries their own.":"Чей это инвентарь. У каждого свой.",
+"Problems and usages…":"Проверка истории…","Problems and usages":"Проверка истории",
+"port context":"ход","port text":"текст","port character":"персонаж","port option":"вариант","port any":"любое",
+"port bool":"да/нет","port int":"число","port float":"число","port item":"предмет","port portrait":"портрет",
+"port variable":"переменная","port location":"место","port storyline":"линия","port section":"раздел",
+"port reference":"ссылка","port list":"список","port collection":"список","port audio":"звук","port file":"файл",
+"context":"ход","Context":"Ход",
+# меню и окна
+"Run":"Запуск","Show Inspector":"Показать панель свойств","Show Project Explorer":"Показать панель проекта",
+"Zoom to selection":"Показать выделенное","Regenerate theme":"Обновить тему","Open Localization Utility":"Открыть перевод",
+"Untranslated only":"Только без перевода","Check":"Проверить","Was at":"Уже проходил","was at":"уже проходил",
+"shown if":"показан, если","Join":"Выходит на сцену","Leave":"Уходит со сцены","Reroute":"Точка изгиба",
+"Input":"Ввод текста","speaker":"кто говорит","display_name":"имя для игрока","stackable":"кладётся стопкой",
+"max_stack":"максимум в стопке","eases":"кривые анимации","Easing Curves":"Кривые анимации",
+"%d to look at":"Замечаний: %d","⚠ Missing (%s)":"⚠ Не найдено (%s)",
+# подсказки и сообщения
+"Edited — replaying your path…":"Правка — прохожу ваш путь заново…",
+"Back where you were.":"Вы там же, где были.",
+"The edit changed the story here; carry on yourself.":"Правка изменила историю в этом месте — дальше выбирайте сами.",
+"Hold the story until the game says it is done.":"Ждать, пока игра не скажет, что закончила.",
+"Nothing here accepts that connection":"Сюда эту связь подключить нельзя",
+"What was typed had nowhere to go.":"Введённое некуда сохранить.",
+"Image shown behind the scene from here on.":"Фон сцены с этого места.",
+"Sound or music to play from here on.":"Звук или музыка с этого места.",
+"This moves none of the item, so nothing changes.":"Количество — ноль, ничего не изменится.",
+"Text the player reads, stored per language.":"Текст, который видит игрок; для каждого языка свой.",
+"A whole number, fed into whatever reads it.":"Целое число — уходит дальше по связи.",
+"A number with decimals, fed into whatever reads it.":"Дробное число — уходит дальше по связи.",
+"A yes or no, fed into whatever reads it.":"Да или нет — уходит дальше по связи.",
+"A piece of text, fed into whatever reads it.":"Текст — уходит дальше по связи.",
+"Bends a wire without changing anything about the story.":"Изгибает провод, ничего не меняя в истории.",
+"One per place the section stops. Wire each onward.":"По одному на каждое место, где раздел заканчивается. Протяните от каждого связь дальше.",
+"Free labels the game can filter on. Monologue never reads them.":"Метки для игры, по ним она может искать. Сам Monologue их не читает.",
+"Whether the character comes on, goes off, or only changes.":"Персонаж выходит на сцену, уходит или только меняется.",
+"Replay the saved route and say whether it still gets through.":"Пройти сохранённый маршрут и проверить, проходит ли он до сих пор.",
+"Keep the answers given so far under this name, in the project.":"Запомнить выбранные ответы под этим именем. Хранится в проекте.",
+"have no way out of it. Take the whole branch in.":"— из них нет выхода. Выделите ветку целиком.",
+"Not valid JSON.":"Это не JSON или он повреждён.",
+"[center][b]Monologue Preview[/b][/center]\n\nMonologue is in preview. If you encounter any bugs or issues, please report them on [url=https://github.com/atomic-junky/Monologue/]GitHub[/url] by creating an issue.\n\nThank you very much for using Monologue!":
+"[center][b]Russian Monologue[/b][/center]\n\nНашли ошибку — напишите о ней на [url=https://github.com/andreysuperfly/russian-monologue/issues]GitHub[/url].\n\nСпасибо, что пользуетесь!",
+})
 with open(__file__.replace('make_ru.py','ru.csv'),'w',newline='',encoding='utf-8') as f:
     w=csv.writer(f); w.writerow(['keys','ru'])
     for k,v in T.items(): w.writerow([k,v])

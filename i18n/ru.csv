@@ -60,8 +60,8 @@ Search nodes,Поиск узлов
 Show searchbar,Показать поиск
 Show Console,Показать консоль
 Show Grid,Показать сетку
-Show Inspector,Показать инспектор
-Show Project Explorer,Показать обозреватель проекта
+Show Inspector,Показать панель свойств
+Show Project Explorer,Показать панель проекта
 Show Status Bar,Показать строку состояния
 Toggle grid,Сетка вкл/выкл
 Toggle snapping,Привязка вкл/выкл
@@ -71,8 +71,8 @@ Pixel grid,Пиксельная сетка
 Zoom in,Приблизить
 Zoom out,Отдалить
 Zoom to fit,Показать всё
-Zoom to selection,К выделенному
-Run,Проигрывание
+Zoom to selection,Показать выделенное
+Run,Запуск
 Run project,Запустить проект
 Run project from this node,Запустить с этого узла
 Arrange nodes,Упорядочить узлы
@@ -90,11 +90,11 @@ Contribute,Помочь проекту
 Support Us,Поддержать
 Copy System Info,Скопировать сведения о системе
 Don't show this again,Больше не показывать
-Regenerate theme,Пересоздать тему
-Open Localization Utility,Открыть локализацию
+Regenerate theme,Обновить тему
+Open Localization Utility,Открыть перевод
 Localization,Локализация
 Translation,Перевод
-Untranslated only,Только непереведённое
+Untranslated only,Только без перевода
 Source Text,Исходный текст
 Switch language,Сменить язык
 Language:,Язык:
@@ -115,9 +115,9 @@ variables,переменные
 items,предметы
 locations,места
 languages,языки
-eases,кривые
+eases,кривые анимации
 line,реплика
-speaker,говорящий
+speaker,кто говорит
 choices,варианты
 condition,условие
 value,значение
@@ -137,7 +137,7 @@ storyline,сюжетная линия
 notes,заметки
 tags,метки
 name,имя
-display_name,показываемое имя
+display_name,имя для игрока
 portrait,портрет
 portraits,портреты
 color,цвет
@@ -146,21 +146,21 @@ once,один раз
 text,текст
 character,персонаж
 option,вариант
-context,поток
+context,ход
 seconds,секунды
 action,действие
 operator,оператор
 enabled,включено
 default,по умолчанию
-stackable,складывается
-max_stack,макс. в стопке
+stackable,кладётся стопкой
+max_stack,максимум в стопке
 price,цена
 persistent,сохраняется
 Variable,Переменная
-Was at,Был в узле
-Carries,В карманах
-carries,несёт
-was at,был в
+Was at,Уже проходил
+Carries,В инвентаре
+carries,имеет в инвентаре
+was at,уже проходил
 NOT,НЕ
 AND,И
 OR,ИЛИ
@@ -173,24 +173,24 @@ Any of them (OR),Любое (ИЛИ)
 How the checks combine.,Как сочетаются условия.
 Remove this check.,Убрать это условие.
 Turn this check around: true becomes false.,Перевернуть: «да» становится «нет».
-⚠ Missing (%s),⚠ Нет такого (%s)
+⚠ Missing (%s),⚠ Не найдено (%s)
 test,условие
 State,Состояние
 Variables,Переменные
-Pockets,Карманы
+Pockets,Инвентарь
 Passed,Пройдено
 empty,пусто
 Restart from the top,Начать сначала
 "%d nodes, %d answers recorded","узлов: %d, ответов записано: %d"
 Changes here last for this run only. The project is not touched.,Изменения здесь — только на этот прогон. Проект не меняется.
-Back where you were.,"Вернулись туда, где вы были."
-The edit changed the story here; carry on yourself.,Правка изменила историю здесь — дальше сами.
+Back where you were.,"Вы там же, где были."
+The edit changed the story here; carry on yourself.,Правка изменила историю в этом месте — дальше выбирайте сами.
 That answer is gone after the edit; pick again.,После правки этого ответа нет — выберите заново.
-Edited — replaying your path…,Правка — проматываю ваш путь…
+Edited — replaying your path…,Правка — прохожу ваш путь заново…
 Set by hand: %s,Задано вручную: %s
 The story stopped.,История закончилась.
-Problems and usages…,Проблемы и ссылки…
-Problems and usages,Проблемы и ссылки
+Problems and usages…,Проверка истории…
+Problems and usages,Проверка истории
 Problems,Проблемы
 Where used,Где используется
 Check again,Проверить ещё раз
@@ -198,7 +198,7 @@ Where,Где
 What,Что
 Field,Поле
 Nothing to fix.,Исправлять нечего.
-%d to look at,Посмотреть: %d
+%d to look at,Замечаний: %d
 Not used anywhere.,Нигде не используется.
 Variable «%s» is changed but never checked.,"Переменная «%s» меняется, но нигде не проверяется."
 Variable «%s» is checked but never changed — only its start value counts.,"Переменная «%s» проверяется, но нигде не меняется — работает только начальное значение."
@@ -218,7 +218,7 @@ Path %d — %d steps,Путь %d — шагов: %d
 no conditions,без условий
 Showing the first %d paths.,Показаны первые %d путей.
 Pick,Выбрать
-shown if,"виден, если"
+shown if,"показан, если"
 Event,Событие
 Note,Заметка
 Notes,Заметки
@@ -232,10 +232,10 @@ Blue,Синий
 Grey,Серый
 Route name,Имя маршрута
 Save route,Сохранить маршрут
-Check,Пройти
+Check,Проверить
 Delete this route.,Удалить маршрут.
-"Keep the answers given so far under this name, in the project.",Запомнить ответы под этим именем — в самом проекте.
-Replay the saved route and say whether it still gets through.,"Пройти сохранённый маршрут и сказать, проходит ли он ещё."
+"Keep the answers given so far under this name, in the project.",Запомнить выбранные ответы под этим именем. Хранится в проекте.
+Replay the saved route and say whether it still gets through.,"Пройти сохранённый маршрут и проверить, проходит ли он до сих пор."
 Name the route first.,Сначала назовите маршрут.
 Route saved: %s,Маршрут сохранён: %s
 Checking route: %s…,Проверяю маршрут: %s…
@@ -252,7 +252,7 @@ Not connected to the start,Не связано с началом
 nowhere,никуда
 start,начало
 IF,ЕСЛИ
-pockets,карманы
+pockets,инвентарь
 Give,Дать
 Take,Забрать
 Set,Задать
@@ -297,7 +297,7 @@ Items,Предметы
 Inventory,Инвентарь
 Collections,Коллекции
 Collection,Коллекция
-Easing Curves,Кривые сглаживания
+Easing Curves,Кривые анимации
 Portraits,Портреты
 Variations,Варианты
 Options,Варианты ответа
@@ -315,9 +315,9 @@ Value,Значение
 Type,Тип
 Key,Ключ
 Label,Метка
-Context,Контекст
+Context,Ход
 Group,Группа
-Root,Корень
+Root,Начало
 Text,Текст
 Text Area,Многострочный текст
 Color,Цвет
@@ -357,10 +357,10 @@ End,Конец
 Checkpoint,Точка сохранения
 Wait,Пауза
 Wait Input,Ждать нажатия
-Input,Ввод
-Reroute,Перенаправление
-Join,Присоединиться
-Leave,Уйти
+Input,Ввод текста
+Reroute,Точка изгиба
+Join,Выходит на сцену
+Leave,Уходит со сцены
 Exits,Выходы
 If,Если
 A line of dialogue.,Строка диалога.
@@ -385,11 +385,11 @@ Hands the story over to another storyline.,Передаёт историю в д
 "Continues in another section, without coming back.",Продолжает в другом разделе без возврата.
 "Runs a section, then carries on from wherever it stopped.","Проигрывает раздел и продолжает с того места, где он остановился."
 Tells the game to do something Monologue knows nothing about.,"Просит игру сделать то, о чём Monologue ничего не знает."
-Hold the story until the game says it is done.,"Держать историю, пока игра не скажет, что готово."
+Hold the story until the game says it is done.,"Ждать, пока игра не скажет, что закончила."
 Interrupts the story when a variable changes to match.,"Прерывает историю, когда переменная принимает нужное значение."
-Bends a wire without changing anything about the story.,"Изгибает связь, ничего не меняя в истории."
+Bends a wire without changing anything about the story.,"Изгибает провод, ничего не меняя в истории."
 Pick a node type to read what it does.,"Выберите тип узла, чтобы прочитать, что он делает."
-"Text the player reads, stored per language.","Текст, который читает игрок, хранится для каждого языка."
+"Text the player reads, stored per language.","Текст, который видит игрок; для каждого языка свой."
 Shown to the player. Falls back to the name when empty.,Показывается игроку. Если пусто — используется имя.
 Other names this character is known by.,Другие имена этого персонажа.
 Everyone who can speak or be referred to in the story.,"Все, кто может говорить или упоминаться в истории."
@@ -407,10 +407,10 @@ Face to change to while saying this. Only for a speaker already on stage.,"Ка�
 Which face to wear. Falls back to the character's default portrait.,Какое лицо показать. Иначе — портрет по умолчанию.
 Where on screen the character stands.,Где на экране стоит персонаж.
 Who stands in front of whom.,Кто стоит перед кем.
-"Whether the character comes on, goes off, or only changes.","Выходит персонаж, уходит или только меняется."
+"Whether the character comes on, goes off, or only changes.","Персонаж выходит на сцену, уходит или только меняется."
 Who this is about.,О ком это.
 Which item this is about.,О каком предмете это.
-Whose pockets this is about. Everyone carries their own.,Чьи это карманы. У каждого свои.
+Whose pockets this is about. Everyone carries their own.,Чей это инвентарь. У каждого свой.
 How many. Setting zero is how an item is taken away entirely.,Сколько. Ноль — предмет забирается полностью.
 Whether several of these occupy one slot.,Складываются ли несколько таких в одну ячейку.
 Ignored when the item does not stack.,"Не учитывается, если предмет не складывается."
@@ -426,8 +426,8 @@ How a place looks. Lives inside a location rather than project-wide.,"Как в�
 Which state to show the place in. Falls back to its default variation.,В каком виде показать место. Иначе — вариант по умолчанию.
 Whether the place's own picture replaces the background.,Заменяет ли картинка места фон.
 Shown when the story is here and this variation is the one asked for.,"Показывается, когда история здесь и выбран этот вариант."
-Image shown behind the scene from here on.,Картинка за сценой отсюда и дальше.
-Sound or music to play from here on.,Звук или музыка отсюда и дальше.
+Image shown behind the scene from here on.,Фон сцены с этого места.
+Sound or music to play from here on.,Звук или музыка с этого места.
 0 plays the file at the level it was recorded.,0 — проигрывать с громкостью записи.
 Keeps playing until something else stops it.,"Играет, пока что-то другое не остановит."
 How long the move takes. Zero happens at once.,Сколько длится движение. Ноль — мгновенно.
@@ -435,20 +435,20 @@ How the move eases. Falls back to the project's default curve.,Как сглаж
 Reusable easing curves referenced by animated fields.,Кривые сглаживания для анимированных полей.
 "Easing curve. Cubic bezier for now, stored as its four coordinates.","Кривая сглаживания. Пока кубическая Безье, хранится как четыре числа."
 "Fires once, then stays quiet for the rest of the run.","Срабатывает один раз, дальше молчит до конца прохождения."
-Free labels the game can filter on. Monologue never reads them.,Свободные метки для игры. Monologue их не читает.
+Free labels the game can filter on. Monologue never reads them.,"Метки для игры, по ним она может искать. Сам Monologue их не читает."
 Multi-line notes for whoever writes the story. Not translated.,Многострочные заметки для автора. Не переводятся.
 "Passed through in order, as written.","Проходятся по порядку, как записаны."
-One per place the section stops. Wire each onward.,"По одному на каждое место, где раздел останавливается. Соедините каждый дальше."
+One per place the section stops. Wire each onward.,"По одному на каждое место, где раздел заканчивается. Протяните от каждого связь дальше."
 "Ways out of a section. Computed, never written by hand.","Выходы из раздела. Считаются сами, вручную не пишутся."
 Section to run.,Какой раздел проиграть.
 Section to continue in.,В каком разделе продолжить.
 Storyline to continue into.,В какую сюжетную линию перейти.
 Storyline the project starts from.,С какой сюжетной линии начинается проект.
 Languages the story can be written in.,"Языки, на которых пишется история."
-"A piece of text, fed into whatever reads it.","Текст — для того, кто его читает."
-"A whole number, fed into whatever reads it.","Целое число — для того, кто его читает."
-"A number with decimals, fed into whatever reads it.","Дробное число — для того, кто его читает."
-"A yes or no, fed into whatever reads it.","Да или нет — для того, кто это читает."
+"A piece of text, fed into whatever reads it.",Текст — уходит дальше по связи.
+"A whole number, fed into whatever reads it.",Целое число — уходит дальше по связи.
+"A number with decimals, fed into whatever reads it.",Дробное число — уходит дальше по связи.
+"A yes or no, fed into whatever reads it.",Да или нет — уходит дальше по связи.
 "A whole number. Drag across it to change it, click to type one.","Целое число. Потяните, чтобы изменить, или щёлкните, чтобы ввести."
 "A number with decimals. Drag across it to change it, click to type one.","Дробное число. Потяните, чтобы изменить, или щёлкните, чтобы ввести."
 Pick one value from a static list or from a collection.,Выберите одно значение из списка или коллекции.
@@ -481,13 +481,13 @@ The section this runs is gone.,"Раздел, который здесь прои
 "This section ends up running itself, so it would never stop.",Раздел запускает сам себя и никогда не остановится.
 "This switches to the storyline it is already in, restarting it.",Переход в ту же сюжетную линию — она начнётся заново.
 "This wait is zero seconds long, so it does nothing.",Пауза ноль секунд — ничего не делает.
-"This moves none of the item, so nothing changes.",Количество предмета ноль — ничего не меняется.
+"This moves none of the item, so nothing changes.","Количество — ноль, ничего не изменится."
 "This item does not stack, so its stack size is never used.","Предмет не складывается, размер стопки не используется."
 This portrait does not belong to the character named here.,Этот портрет не принадлежит указанному персонажу.
 This variation does not belong to the place named here.,Этот вариант не принадлежит указанному месту.
 This place has no picture to show.,У места нет картинки.
 Every option was spent or switched off.,Все варианты использованы или выключены.
-What was typed had nowhere to go.,Введённому некуда сохраниться.
+What was typed had nowhere to go.,Введённое некуда сохранить.
 There is no project to run.,Нет проекта для запуска.
 There is no storyline to continue into.,Нет сюжетной линии для перехода.
 "Nothing has been loaded, so there is nothing to play.",Ничего не загружено — нечего проигрывать.
@@ -500,14 +500,14 @@ A storyline has no id and cannot be reached.,"У сюжетной линии н�
 A node in this storyline has no type.,У узла в этой линии нет типа.
 A wire points at a node that is not in this storyline.,"Связь ведёт к узлу, которого нет в этой линии."
 A value wire loops back on itself.,Связь значения замкнута сама на себя.
-Nothing here accepts that connection,Здесь некуда подключить эту связь
+Nothing here accepts that connection,Сюда эту связь подключить нельзя
 Nothing is selected.,Ничего не выделено.
 Nothing to show here.,Здесь нечего показать.
-have no way out of it. Take the whole branch in.,не имеют выхода. Возьмите ветку целиком.
+have no way out of it. Take the whole branch in.,— из них нет выхода. Выделите ветку целиком.
 No file selected.,Файл не выбран.
 No path to save to.,Не указан путь для сохранения.
 No project to save.,Нет проекта для сохранения.
-Not valid JSON.,Это не корректный JSON.
+Not valid JSON.,Это не JSON или он повреждён.
 Can't open multiple files.,Нельзя открыть несколько файлов сразу.
 Anything that failed to load will be lost.,"Всё, что не загрузилось, будет потеряно."
 The file has no rows to import.,В файле нет строк для импорта.
@@ -520,8 +520,27 @@ A save cannot be restored before a project is loaded.,"Сохранение не
 
 Monologue is in preview. If you encounter any bugs or issues, please report them on [url=https://github.com/atomic-junky/Monologue/]GitHub[/url] by creating an issue.
 
-Thank you very much for using Monologue!","[center][b]Monologue — предварительная версия[/b][/center]
+Thank you very much for using Monologue!","[center][b]Russian Monologue[/b][/center]
 
-Monologue ещё в разработке. Если найдёте ошибку, сообщите о ней на [url=https://github.com/atomic-junky/Monologue/]GitHub[/url].
+Нашли ошибку — напишите о ней на [url=https://github.com/andreysuperfly/russian-monologue/issues]GitHub[/url].
 
-Спасибо, что пользуетесь Monologue!"
+Спасибо, что пользуетесь!"
+port context,ход
+port text,текст
+port character,персонаж
+port option,вариант
+port any,любое
+port bool,да/нет
+port int,число
+port float,число
+port item,предмет
+port portrait,портрет
+port variable,переменная
+port location,место
+port storyline,линия
+port section,раздел
+port reference,ссылка
+port list,список
+port collection,список
+port audio,звук
+port file,файл

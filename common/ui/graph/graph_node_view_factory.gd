@@ -63,7 +63,9 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 			else row.get_type_label()
 		)
 		if shown_label:
-			value_label.text = "[%s]" % shown_label
+			# in the interface language when there is a short word for it: [context] → [ход]
+			var port_word: String = TranslationServer.translate("port " + shown_label)
+			value_label.text = "[%s]" % (port_word if port_word != "port " + shown_label else shown_label)
 
 		var slot_color: Color = NodePort.color_of(row.get_type())
 
