@@ -18,6 +18,7 @@ var _open_storyline: StorylineDocument
 
 
 func _ready() -> void:
+	_let_the_list_scroll()
 	ProjectManager.project_loaded.connect(_rebuild_explorer)
 	EventBus.request_objects_inspection.connect(_on_request_objects_inspection)
 	EventBus.request_storyline_inspection.connect(_on_request_storyline_inspection)
@@ -221,3 +222,16 @@ func _on_request_storyline_inspection(storyline: StorylineDocument) -> void:
 	_open_storyline = storyline
 	for button: Button in _document_buttons():
 		button.set_pressed_no_signal(button.get_meta("document") == storyline)
+
+
+## A project with many storylines made the list taller than the window, and Godot then pushed
+## the whole editor up under the title bar. The list scrolls instead (russian-monologue).
+func _let_the_list_scroll() -> void:
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var holder: Node = project_explorer.get_parent()
+	holder.add_child(scroll)
+	holder.move_child(scroll, project_explorer.get_index())
+	project_explorer.reparent(scroll, false)
+	project_explorer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
