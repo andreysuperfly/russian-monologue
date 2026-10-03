@@ -84,6 +84,12 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 
 		value_label.label_settings = LabelSettings.new()
 		value_label.label_settings.font_color = slot_color
+		# a field nothing is wired into says what it holds, «кто говорит  РАССКАЗЧИК», instead of
+		# its port type (russian-monologue)
+		var value_text: String = _row_value_text(row, node)
+		if not value_text.is_empty():
+			value_label.text = value_text
+			value_label.label_settings.font_color = Color(slot_color, 0.85)
 
 		if idx == 0:
 			key_label.theme_type_variation = "GraphNodeViewTitleLabel"
@@ -382,3 +388,29 @@ static func _derive_node_name(node: InspectableNode) -> String:
 	if id_value.is_empty():
 		id_value = IDGen.generate_object_id(node.get_type())
 	return id_value
+
+
+## What an unwired field holds, for its row on the card; "" keeps the port type showing.
+## Text is left to the preview, which shows it whole.
+static func _row_value_text(row: GraphNodeRow, node: InspectableNode) -> String:
+	if node == null or row == null or not row.sub_property_id.is_empty() or _row_has_wire(row, node):
+		return ""
+	var prop: Property = node.get_property(row._property_name if not row._property_name.is_empty() else row.get_key())
+	if prop == null or prop.is_main_property():
+		return ""
+	var value: Variant = prop.get_value()
+	match prop.type:
+		"reference":
+			var scope: String = str(prop.get_settings_value(PropertySettings.KEY_REFERENCE_SCOPE, ""))
+			var label_property: String = str(prop.get_settings_value(PropertySettings.KEY_LABEL_PROPERTY, ReferenceResolver.DEFAULT_LABEL_PROPERTY))
+			var label: String = ReferenceResolver.resolve_label(ProjectManager.current_project, scope, str(value) if value != null else "", node, label_property)
+			return NodePreview.trim(label, 20) if not label.is_empty() else "—"
+		"dropdown":
+			return TranslationServer.translate(str(value)) if value != null and str(value) != "" else "—"
+		"int":
+			return str(int(value)) if value != null else ""
+		"float":
+			return str(snappedf(float(value), 0.01)) if value != null else ""
+		"bool":
+			return TranslationServer.translate("yes") if bool(value) else TranslationServer.translate("no")
+	return ""

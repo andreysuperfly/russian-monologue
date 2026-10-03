@@ -69,7 +69,8 @@ func _on_node_added(node: Node) -> void:
 
 
 func _take_scale(window: Window) -> void:
-	if not is_instance_valid(window) or window.is_embedded():
+	# MonologueWindow sizes and scales itself (update_size); scaling it again doubled it
+	if not is_instance_valid(window) or window.is_embedded() or window is MonologueWindow:
 		return
 	var factor: float = get_window().content_scale_factor
 	window.content_scale_factor = factor

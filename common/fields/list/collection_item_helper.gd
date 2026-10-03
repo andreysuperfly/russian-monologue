@@ -63,6 +63,17 @@ static func _make_item_row(
 			if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 				ProblemsWindow.show_usages(owner.get_tree().root, item_id))
 
+	# the same «where used» behind a button, for those who would not think to click the name
+	if item.get_type() in ["character", "item", "variable"]:
+		var usages_button: Button = Button.new()
+		usages_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		usages_button.icon = load("res://ui/assets/icons/link.svg")
+		usages_button.tooltip_text = owner.tr("Where used")
+		usages_button.theme_type_variation = "ListItemIconButton"
+		var usage_id: String = str(item.get_property_value("id"))
+		usages_button.pressed.connect(func() -> void: ProblemsWindow.show_usages(owner.get_tree().root, usage_id))
+		row.add_child(usages_button)
+
 	var edit_button: Button = Button.new()
 	edit_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	edit_button.icon = preload("res://ui/assets/icons/pen.svg")

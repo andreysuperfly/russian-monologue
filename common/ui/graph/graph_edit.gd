@@ -933,9 +933,14 @@ static func _what_goes_too(sections: Array[StorylineDocument]) -> String:
 
 ## «↩ hub» (or «Уйти. ↩ hub» for an option) at the bottom of the card; pressing it goes there.
 func _add_jump_link(from_node: InspectableNode, from_property: String, to_node: InspectableNode) -> void:
-	var target: String = (
-		str(to_node.get_property_value("key")) if to_node.get_type() == "genius_scene" else to_node.graph_view.title
-	)
+	# the scene's key, «end» for an end node, else the node's own label — never a bare id
+	var target: String = str(to_node.get_property_value("label"))
+	if to_node.get_type() == "genius_scene":
+		target = str(to_node.get_property_value("key"))
+	elif to_node.get_type() == "end":
+		target = tr("End")
+	elif target.is_empty() or target == to_node.get_id():
+		target = tr(Util.to_readable_name(to_node.get_type()))
 	var prefix: String = ""
 	if from_property.contains(NodeConnection.ITEM_SEPARATOR):
 		var item_id: String = from_property.get_slice(NodeConnection.ITEM_SEPARATOR, 1).trim_prefix(NodeConnection.EXTERNAL_PREFIX)

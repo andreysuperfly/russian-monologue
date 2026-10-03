@@ -22,6 +22,8 @@ func _ready() -> void:
 	super._ready()
 	hide()
 	force_native = true
+	# a plain title bar: drawn under it, the search field sat beneath the window buttons
+	extend_to_title = false
 	EventBus.enable_picker_mode.connect(_on_enable_picker_mode)
 	node_tree.type_highlighted.connect(_on_type_highlighted)
 	_on_type_highlighted(null)
