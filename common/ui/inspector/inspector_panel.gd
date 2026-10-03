@@ -19,6 +19,9 @@ var history: Array[Array] = []
 var _watched_objects: Array[InspectableObject] = []
 
 
+var _closed_on: Array[InspectableObject] = []
+
+
 func _ready() -> void:
 	EventBus.request_objects_inspection.connect(inspect)
 	EventBus.show_inspector.connect(_on_event_show_inspector)
@@ -26,6 +29,20 @@ func _ready() -> void:
 	ProjectManager.project_loaded.connect(_on_project_loaded)
 	back_button.pressed.connect(_on_back_button_pressed)
 	visible = ConfigManager.get_config("show_inspector")
+	_add_close_button()
+
+
+## × in the corner (russian-monologue): puts the panel away until something else is picked.
+func _add_close_button() -> void:
+	var close: Button = Button.new()
+	close.text = "✕"
+	close.flat = true
+	close.tooltip_text = tr("Close")
+	close.focus_mode = Control.FOCUS_NONE
+	close.pressed.connect(func() -> void:
+		_closed_on = current_objects.duplicate()
+		hide())
+	back_button.get_parent().add_child(close)
 
 
 func _on_project_loaded() -> void:
@@ -59,11 +76,12 @@ func inspect(objects: Array[InspectableObject], from_history: bool = false) -> v
 	current_objects = objects
 	_watch_gates(objects)
 
-	# Nothing selected means nothing to inspect.
-	if objects.is_empty() or not ConfigManager.get_config("show_inspector"):
+	# Nothing selected means nothing to inspect; closed stays closed for the same selection.
+	if objects.is_empty() or not ConfigManager.get_config("show_inspector") or objects == _closed_on:
 		hide()
 		return
 
+	_closed_on = []
 	show()
 	Log.info("Inspect %d object(s): %s" % [objects.size(), ", ".join(_selection_ids(objects))])
 
