@@ -11,7 +11,7 @@ func _get_default_eases() -> Dictionary:
 	}
 
 func _get_default_languages() -> Dictionary:
-	return { "en": "English" }
+	return ProjectTemplate.interface_language()
 
 func setup_collection(project: MonologueProject) -> void:
 	var command_manager: CommandManager = project.command_manager
@@ -19,7 +19,7 @@ func setup_collection(project: MonologueProject) -> void:
 	var default_narrator: CollectionItem = MonologueRegistry.get_instance().create_collection_item(
 		"characters", command_manager
 	)
-	default_narrator.set_property_value("name", "Narrator")
+	default_narrator.set_property_value("name", TranslationServer.translate("Narrator"))
 	default_narrator.set_property_value("protected", true)
 
 	var default_languages: Dictionary = _get_default_languages()
@@ -31,7 +31,7 @@ func setup_collection(project: MonologueProject) -> void:
 		)
 		language.set_property_value("name", language_name)
 		language.set_property_value("code", language_code)
-		if language_code == "en":
+		if languages_data.is_empty():
 			language.set_property_value("protected", true)
 
 		languages_data.append(language._to_dict())

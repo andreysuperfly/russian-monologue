@@ -51,8 +51,6 @@ func _get_default_eases() -> Dictionary:
 	return eases
 
 func _get_default_languages() -> Dictionary:
-	return {
-		"en": "English",
-		"es": "Spanish",
-		"fr": "French"
-	}
+	var languages: Dictionary = ProjectTemplate.interface_language()
+	languages.merge({"en": "English", "es": "Spanish", "fr": "French"})
+	return languages

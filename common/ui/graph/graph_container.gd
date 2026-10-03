@@ -17,6 +17,7 @@ var _is_applying_selection: bool = false
 
 
 func _ready() -> void:
+	_lay_header_in_a_row()
 	graph.selection_changed.connect(_on_graph_selection_changed)
 	snap_button.pressed.connect(_on_snap_button_pressed)
 	grid_button.pressed.connect(_on_grid_button_pressed)
@@ -224,3 +225,31 @@ func _on_event_graph_snap(enabled: bool) -> void:
 func _on_event_show_grid(grid_visible: bool) -> void:
 	graph.show_grid = grid_visible
 	grid_button.button_pressed = grid_visible
+
+
+
+## The header's three parts used to lie on top of each other, so in a narrow window (or with a
+## big interface scale) the search ran over the menus. In a row, the search narrows instead.
+func _lay_header_in_a_row() -> void:
+	var header: Control = get_node_or_null("VBoxContainer/Header")
+	if header == null or not header.has_node("HeaderCenter"):
+		return
+	var row: HBoxContainer = HBoxContainer.new()
+	header.add_child(row)
+	var center: Control = header.get_node("HeaderCenter")
+	var parts: Array = [header.get_node("HeaderLeft"), _spring(), center, _spring(), header.get_node("HeaderRight")]
+	for part: Control in parts:
+		if part.get_parent():
+			part.reparent(row, false)
+		else:
+			row.add_child(part)
+	center.custom_minimum_size.x = 120
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL  # a third of the spare room, with the two springs
+	center.size_flags_stretch_ratio = 1.0
+
+
+static func _spring() -> Control:
+	var spring: Control = Control.new()
+	spring.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return spring

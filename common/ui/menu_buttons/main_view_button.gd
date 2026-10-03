@@ -14,6 +14,10 @@ func _build_menu() -> void:
 	)
 	add_check_row("Show Pictures", Pictures.enabled(), _on_show_pictures)
 	add_separator()
+	add_row("Bigger", func() -> void: App.step_ui_scale(1), true, ["mnl_ui_bigger"])
+	add_row("Smaller", func() -> void: App.step_ui_scale(-1), true, ["mnl_ui_smaller"])
+	add_row("Actual Size", func() -> void: ConfigManager.set_config("ui_scale", "100%"), true, ["mnl_ui_reset"])
+	add_separator()
 	add_row("Regenerate theme", _on_regenerate_theme, true, ["mnl_regenerate_theme"])
 
 

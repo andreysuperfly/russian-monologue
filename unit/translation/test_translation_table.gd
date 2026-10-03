@@ -7,6 +7,19 @@ extends GdUnitTestSuite
 var _project: MonologueProject
 
 
+## New projects take the interface language; these tests are written against an English one.
+var _locale: String
+
+
+func before() -> void:
+	_locale = TranslationServer.get_locale()
+	TranslationServer.set_locale("en")
+
+
+func after() -> void:
+	TranslationServer.set_locale(_locale)
+
+
 func before_test() -> void:
 	_project = auto_free(MonologueProject.new())
 	await _project.ready

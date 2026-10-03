@@ -6,6 +6,7 @@ class_name LanguageSwitcher extends OptionButton
 
 ## True while this switcher is the one making the change, so its own echo is ignored.
 var _is_applying: bool = false
+const ADD_LANGUAGE: String = "<add>"
 
 
 func _ready() -> void:
@@ -48,6 +49,10 @@ func load_languages(languages: Array) -> void:
 
 	if item_count == 0:
 		return
+	# the way to more languages, right where they are chosen (russian-monologue)
+	add_separator()
+	add_item(tr("+ Add language…"))
+	set_item_metadata(item_count - 1, ADD_LANGUAGE)
 
 	var still_here: int = _index_of(reading)
 	if still_here >= 0:
@@ -71,6 +76,14 @@ func _on_languages_content_changed() -> void:
 
 
 func _on_item_selected(index: int) -> void:
+	if get_item_metadata(index) == ADD_LANGUAGE:
+		# back to the language being read, and open the list of languages to add one
+		var project: MonologueProject = ProjectManager.current_project
+		select(maxi(0, _index_of(project.active_language_code if project else "")))
+		if project:
+			var languages: CollectionDocument = project.get_collection("languages")
+			EventBus.request_objects_inspection.emit([languages] as Array[InspectableObject])
+		return
 	_apply_selection(index)
 
 

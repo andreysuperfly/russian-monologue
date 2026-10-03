@@ -6,14 +6,15 @@ func setup_collection(project: MonologueProject) -> void:
 	var default_narrator: CollectionItem = MonologueRegistry.get_instance().create_collection_item(
 		"characters", command_manager
 	)
-	default_narrator.set_property_value("name", "Narrator")
+	default_narrator.set_property_value("name", TranslationServer.translate("Narrator"))
 	default_narrator.set_property_value("protected", true)
 
 	var default_language: CollectionItem = MonologueRegistry.get_instance().create_collection_item(
 		"languages", command_manager
 	)
-	default_language.set_property_value("name", "English")
-	default_language.set_property_value("code", "en")
+	var first: Dictionary = ProjectTemplate.interface_language()
+	default_language.set_property_value("name", first.values()[0])
+	default_language.set_property_value("code", first.keys()[0])
 	default_language.set_property_value("protected", true)
 
 	var ease_item: CollectionItem = MonologueRegistry.get_instance().create_collection_item(

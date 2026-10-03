@@ -8,6 +8,12 @@ func initialize_properties() -> void:
 		.default("System")
 		.tooltip("Language of the editor itself. System follows your computer."))
 
+	define_property(Property.new("interface/ui_scale")
+		.set_type("dropdown")
+		.options(App.SCALES)
+		.default("100%")
+		.tooltip("Size of all text and controls. Also View → Bigger / Smaller, ⌘+ and ⌘−."))
+
 	define_property(Property.new("interface/show_pictures")
 		.set_type("bool")
 		.default(true)
@@ -39,6 +45,8 @@ func initialize_properties() -> void:
 func set_property_value(pname: String, pvalue: Variant) -> void:
 	super.set_property_value(pname, pvalue)
 	ConfigManager.save_configuration()
+	if pname == "ui_scale":
+		App.apply_ui_scale()
 	if pname == "show_pictures":
 		Pictures.clear()
 		EventBus.refresh_graph.emit()

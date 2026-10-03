@@ -12,6 +12,19 @@ var _path: String
 var _player: ScriptedPlayer
 
 
+## New projects take the interface language; these tests are written against an English one.
+var _locale: String
+
+
+func before() -> void:
+	_locale = TranslationServer.get_locale()
+	TranslationServer.set_locale("en")
+
+
+func after() -> void:
+	TranslationServer.set_locale(_locale)
+
+
 func before_test() -> void:
 	MonologueRegistry.reset_instance()
 	_path = "%s/session_%d.mnlp" % [create_temp_dir("mnlp"), randi()]
