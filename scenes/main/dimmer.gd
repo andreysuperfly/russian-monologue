@@ -16,6 +16,9 @@ func _process(_delta: float) -> void:
 	for child: Node in parent.get_children().slice(index + 1):
 		if not child.visible:
 			continue
+		# the picture following a drag lands here too; it is not a window (russian-monologue)
+		if get_viewport().gui_is_dragging() and str(child.name).begins_with("@"):
+			continue
 
 		show()
 		return
