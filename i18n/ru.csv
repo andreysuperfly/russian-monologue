@@ -189,6 +189,37 @@ That answer is gone after the edit; pick again.,После правки этог
 Edited — replaying your path…,Правка — проматываю ваш путь…
 Set by hand: %s,Задано вручную: %s
 The story stopped.,История закончилась.
+Problems and usages…,Проблемы и ссылки…
+Problems and usages,Проблемы и ссылки
+Problems,Проблемы
+Where used,Где используется
+Check again,Проверить ещё раз
+Where,Где
+What,Что
+Field,Поле
+Nothing to fix.,Исправлять нечего.
+%d to look at,Посмотреть: %d
+Not used anywhere.,Нигде не используется.
+Variable «%s» is changed but never checked.,"Переменная «%s» меняется, но нигде не проверяется."
+Variable «%s» is checked but never changed — only its start value counts.,"Переменная «%s» проверяется, но нигде не меняется — работает только начальное значение."
+Variable «%s» is not used anywhere.,Переменная «%s» нигде не используется.
+Item «%s» is given but never checked.,"Предмет «%s» выдаётся, но нигде не проверяется."
+%s is required.,Не заполнено поле «%s».
+stream,звук
+Condition is on but empty.,"Условие включено, но пустое."
+Path to an ending,Путь к концовке
+"Pick an ending (or any node): every way to reach it, and what each one needs.",Выберите концовку (или любой узел): все пути к ней и что нужно на каждом.
+Path,Путь
+Needs,Что нужно
+No way leads here.,Сюда не ведёт ни один путь.
+Needed on every path,Нужно на любом пути
+nothing,ничего
+Path %d — %d steps,Путь %d — шагов: %d
+no conditions,без условий
+Showing the first %d paths.,Показаны первые %d путей.
+Pick,Выбрать
+shown if,"виден, если"
+Event,Событие
 Storyline,Сюжетная линия
 Storylines,Сюжетные линии
 Characters,Персонажи
@@ -256,7 +287,6 @@ Sentence,Реплика
 Choice,Выбор
 Condition,Условие
 Action,Действие
-Event,Событие
 End,Конец
 Jump,Переход
 Section,Раздел
@@ -380,7 +410,6 @@ This node names nowhere to move to.,"В узле не указано, куда �
 This node names nobody to carry the item.,"В узле не указано, у кого предмет."
 This node asks the game for nothing.,Узел ничего не просит у игры.
 "This condition tests nothing, so it always takes the same branch.",Условие ничего не проверяет и всегда идёт в одну ветку.
-Condition is on but empty.,"Условие включено, но пустое."
 "This option's condition is enabled but empty, so it always shows.","У варианта включено пустое условие, поэтому он показывается всегда."
 "This event watches no variable, so it never fires.",Событие не следит ни за одной переменной и не сработает.
 This jump names no section.,В переходе не указан раздел.

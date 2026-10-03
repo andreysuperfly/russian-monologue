@@ -9,6 +9,11 @@ func _build_menu() -> void:
 	add_submenu_row("Undo History", Callable(), false)
 	add_separator()
 	add_row("Open Localization Utility", _on_open_localization)
+	add_row("Problems and usages…", _on_open_problems)
+
+
+func _on_open_problems() -> void:
+	ProblemsWindow.open_for(get_tree().root)
 
 
 func _on_open_localization() -> void:

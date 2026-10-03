@@ -113,8 +113,8 @@ static func said(node: InspectableNode, property_name: String, language: String)
 
 
 ## A condition as it reads, such as "gold >= 3". Empty when it names no variable.
-static func condition(test: Variant) -> String:
-	var project: MonologueProject = ProjectManager.current_project
+static func condition(test: Variant, in_project: MonologueProject = null) -> String:
+	var project: MonologueProject = in_project if in_project != null else ProjectManager.current_project
 	if project == null:
 		return ""
 	var parts: PackedStringArray = PackedStringArray()
