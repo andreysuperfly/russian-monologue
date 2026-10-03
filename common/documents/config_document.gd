@@ -8,6 +8,11 @@ func initialize_properties() -> void:
 		.default("System")
 		.tooltip("Language of the editor itself. System follows your computer."))
 
+	define_property(Property.new("interface/show_pictures")
+		.set_type("bool")
+		.default(true)
+		.tooltip("Small faces and item icons beside names: on cards, in lists and pickers."))
+
 	define_property(Property.new("interface/show_project_explorer")
 		.set_type("bool")
 		.default(true))
@@ -34,7 +39,12 @@ func initialize_properties() -> void:
 func set_property_value(pname: String, pvalue: Variant) -> void:
 	super.set_property_value(pname, pvalue)
 	ConfigManager.save_configuration()
-	if pname == "interface/language":
+	if pname == "show_pictures":
+		Pictures.clear()
+		EventBus.refresh_graph.emit()
+		if ProjectManager.current_project:
+			ProjectManager.current_project.content_changed.emit()
+	if pname == "language":
 		preload("res://i18n/locale.gd").apply(str(pvalue))
 
 

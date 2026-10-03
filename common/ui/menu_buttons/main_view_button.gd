@@ -12,6 +12,7 @@ func _build_menu() -> void:
 	add_check_row(
 		"Show Status Bar", ConfigManager.get_config("show_status_bar"), _on_show_status_bar
 	)
+	add_check_row("Show Pictures", Pictures.enabled(), _on_show_pictures)
 	add_separator()
 	add_row("Regenerate theme", _on_regenerate_theme, true, ["mnl_regenerate_theme"])
 
@@ -34,6 +35,11 @@ func _on_show_console(enabled: bool) -> void:
 func _on_show_status_bar(enabled: bool) -> void:
 	ConfigManager.set_config("show_status_bar", enabled)
 	EventBus.show_status_bar.emit(enabled)
+
+
+## Faces and item icons beside names (russian-monologue); see Pictures.
+func _on_show_pictures(enabled: bool) -> void:
+	ConfigManager.set_config(Pictures.SETTING, enabled)
 
 
 func _on_regenerate_theme() -> void:

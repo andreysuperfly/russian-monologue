@@ -9,6 +9,7 @@ const MISSING_PREFIX: String = "[!] Missing: "
 const EMPTY_LABEL: String = "<none>"
 ## How the empty entry reads when the collection has an item to fall back to.
 const DEFAULT_LABEL: String = "Default (%s)"
+const PICTURE_SIZE: int = 18
 
 var _value: String = ""
 var _is_listening: bool = false
@@ -19,6 +20,8 @@ var _is_listening: bool = false
 func _ready() -> void:
 	super._ready()
 	option_button.item_selected.connect(_on_item_selected)
+	option_button.add_theme_constant_override("icon_max_width", PICTURE_SIZE)
+	option_button.get_popup().add_theme_constant_override("icon_max_width", PICTURE_SIZE)
 	Field.fit_dropdown(option_button)
 
 
@@ -86,6 +89,10 @@ func _populate() -> void:
 func _add_entry(label: String, target_id: String) -> void:
 	option_button.add_item(label)
 	option_button.set_item_metadata(option_button.item_count - 1, target_id)
+	# a face or an icon beside the name, when the project has one (russian-monologue)
+	var picture: Texture2D = Pictures.of(_get_project(), _scope(), target_id, PICTURE_SIZE)
+	if picture:
+		option_button.set_item_icon(option_button.item_count - 1, picture)
 
 
 ## Adds the broken entry for a target that is no longer there, and returns its index.

@@ -51,10 +51,10 @@ func _build_preview(_language: String = "") -> Control:
 		return null
 
 	var change: String = {"Take": "-", "Set": "="}.get(str(get_property_value("operation")), "+")
-	return NodePreview.line("%s  %s" % [
+	return NodePreview.with_picture(self, "item", "items", NodePreview.line("%s  %s" % [
 		NodePreview.tinted(self, "who"),
 		NodePreview.plain("%s%d %s" % [change, int(get_property_value("quantity")), item])
-	])
+	]), 18)
 
 
 ## Giving or taking nothing is a node that runs and changes nothing, which reads as if

@@ -39,6 +39,11 @@ static func _make_item_row(
 	row.add_child(drag_handle)
 	row.init_drag()
 
+	# a face or an icon before the name, when there is one (russian-monologue)
+	var badge: Control = Pictures.badge_for(ProjectManager.current_project, item._to_dict(), 22)
+	if badge:
+		row.add_child(badge)
+
 	var preview_prop_name: String = item.get_preview_property_names()[0]
 	var preview_prop: Property = item.get_property(preview_prop_name)
 	var preview_field: Field = FieldWidgetFactory.create(preview_prop.type)

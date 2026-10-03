@@ -7,7 +7,7 @@ const CHOICES: Dictionary = {"English": "en", "Русский": "ru"}
 
 
 func _ready() -> void:
-	apply(str(ConfigManager.get_config("interface/language", SYSTEM)))
+	apply(str(ConfigManager.get_config("language", SYSTEM)))
 
 
 static func apply(choice: String) -> void:

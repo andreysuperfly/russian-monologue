@@ -62,6 +62,25 @@ static func paragraph(bbcode: String, max_lines: int = 3, tint: Color = Color(0,
 	return card
 
 
+## [param preview] with the picture of what [param property] names in front of it (a speaker's
+## face, an item's icon); the preview alone when pictures are off or there is none.
+static func with_picture(node: InspectableNode, property: String, scope: String, preview: Control, size: int = 22) -> Control:
+	if preview == null:
+		return null
+	var badge: Control = Pictures.badge(ProjectManager.current_project, scope, str(node.get_property_value(property)), size)
+	if badge == null:
+		return preview
+	badge.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var box: HBoxContainer = HBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_PASS
+	box.add_theme_constant_override("separation", 7)
+	box.add_child(badge)
+	preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(preview)
+	box.custom_minimum_size.y = maxf(preview.custom_minimum_size.y, size)
+	return box
+
+
 static func row(pieces: Array) -> HBoxContainer:
 	var box: HBoxContainer = HBoxContainer.new()
 	box.mouse_filter = Control.MOUSE_FILTER_PASS
