@@ -525,6 +525,16 @@ Thank you very much for using Monologue!","[center][b]Russian Monologue[/b][/cen
 Нашли ошибку — напишите о ней на [url=https://github.com/andreysuperfly/russian-monologue/issues]GitHub[/url].
 
 Спасибо, что пользуетесь!"
+Compact Cards,Компактные карточки
+Node color,Цвет узла
+"Cards show only their title, wired rows and preview.","На карточке только заголовок, подключённые строки и суть."
+↻ Check again,↻ Проверить снова
+ERROR,ОШИБКА
+WARNING,ПРЕДУПРЕЖДЕНИЕ
+Go to →,Перейти →
+Go to %s,Перейти: %s
+Delete %d nodes,Удалить узлы: %d
+Editing %d objects at once.,Выбрано: %d — правка идёт всем сразу.
 Back (⌘[),Назад (⌘[)
 Forward (⌘]),Вперёд (⌘])
 pass,да

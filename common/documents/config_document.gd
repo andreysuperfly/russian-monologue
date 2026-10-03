@@ -14,6 +14,10 @@ func initialize_properties() -> void:
 		.default("100%")
 		.tooltip("Size of all text and controls. Also View → Bigger / Smaller, ⌘+ and ⌘−."))
 
+	define_property(Property.new("graph/compact_cards")
+		.set_type("bool")
+		.tooltip("Cards show only their title, wired rows and preview."))
+
 	define_property(Property.new("interface/show_pictures")
 		.set_type("bool")
 		.default(true)

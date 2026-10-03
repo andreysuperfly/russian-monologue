@@ -42,6 +42,19 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 	if title_bar:
 		title_bar.hide()
 
+	# the card's own colour, if one was picked: a band on top and a dot before the title
+	var tint_value: Variant = node.get_property_value("node_color")
+	var tint: Color = Color(str(tint_value)) if tint_value != null and str(tint_value) != "" else Color(0, 0, 0, 0)
+	for style_name: StringName in [&"panel", &"panel_selected"]:
+		graph_node.remove_theme_stylebox_override(style_name)
+		if tint.a > 0.0:
+			var base: StyleBox = graph_node.get_theme_stylebox(style_name)
+			if base is StyleBoxFlat:
+				var tinted: StyleBoxFlat = base.duplicate()
+				tinted.border_color = tint
+				tinted.border_width_top = 3
+				graph_node.add_theme_stylebox_override(style_name, tinted)
+
 	var rows: Array[GraphNodeRow] = _build_rows(node)
 	for idx: int in rows.size():
 		var row: GraphNodeRow = rows[idx]
@@ -74,6 +87,16 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 
 		if idx == 0:
 			key_label.theme_type_variation = "GraphNodeViewTitleLabel"
+			if tint.a > 0.0:
+				var dot: Panel = Panel.new()
+				dot.custom_minimum_size = Vector2(8, 8)
+				dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+				dot.mouse_filter = Control.MOUSE_FILTER_PASS
+				var dot_style: StyleBoxFlat = StyleBoxFlat.new()
+				dot_style.bg_color = tint
+				dot_style.set_corner_radius_all(4)
+				dot.add_theme_stylebox_override(&"panel", dot_style)
+				container.add_child(dot)
 		value_label.theme_type_variation = "GraphNodeViewValueLabel"
 
 		# What a list holds is the node's contents rather than its shape, so it reads
@@ -185,6 +208,9 @@ static func apply_metadata(graph_node: GraphNode, node: InspectableNode) -> void
 
 static func _build_rows(node: InspectableNode) -> Array[GraphNodeRow]:
 	var rows: Array[GraphNodeRow] = []
+	# compact cards (russian-monologue): the title, what is wired and the preview — no idle rows.
+	# Ports are counted from these same rows, so wires stay on the right ports.
+	var is_compact: bool = ConfigManager.get_config("compact_cards", false) == true
 	for prop: Property in node.get_properties():
 		if not prop.is_visible_in_graph():
 			continue
@@ -193,12 +219,31 @@ static func _build_rows(node: InspectableNode) -> Array[GraphNodeRow]:
 		if prop.get_settings_value("is_main_property"):
 			rows.push_front(row)
 			continue
-		rows.append(row)
+		if not is_compact or _row_has_wire(row, node):
+			rows.append(row)
 
 		if prop.type == "collection":
-			rows.append_array(_build_list_sub_rows(node, prop))
+			for sub_row: GraphNodeRow in _build_list_sub_rows(node, prop):
+				if not is_compact or _row_has_wire(sub_row, node):
+					rows.append(sub_row)
 
 	return rows
+
+
+static func _row_has_wire(row: GraphNodeRow, node: InspectableNode) -> bool:
+	if node == null or node.storyline_id.is_empty() or ProjectManager.current_project == null:
+		return false
+	var storyline: StorylineDocument = ProjectManager.current_project.get_storyline(node.storyline_id)
+	if storyline == null:
+		return false
+	var node_id: String = node.get_id()
+	var name: String = row.get_connection_name()
+	for connection: NodeConnection in storyline.connections:
+		if connection.from_node_id == node_id and connection.get_from_name() == name:
+			return true
+		if connection.to_node_id == node_id and connection.get_to_name() == name:
+			return true
+	return false
 
 
 static func _build_property_row(prop: Property, owner: InspectableNode) -> GraphNodeRow:

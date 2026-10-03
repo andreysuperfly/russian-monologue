@@ -13,6 +13,7 @@ func _build_menu() -> void:
 		"Show Status Bar", ConfigManager.get_config("show_status_bar"), _on_show_status_bar
 	)
 	add_check_row("Show Pictures", Pictures.enabled(), _on_show_pictures)
+	add_check_row("Compact Cards", ConfigManager.get_config("compact_cards", false) == true, _on_compact_cards)
 	add_separator()
 	add_row("Bigger", func() -> void: App.step_ui_scale(1), true, ["mnl_ui_bigger"])
 	add_row("Smaller", func() -> void: App.step_ui_scale(-1), true, ["mnl_ui_smaller"])
@@ -39,6 +40,12 @@ func _on_show_console(enabled: bool) -> void:
 func _on_show_status_bar(enabled: bool) -> void:
 	ConfigManager.set_config("show_status_bar", enabled)
 	EventBus.show_status_bar.emit(enabled)
+
+
+## Cards with only their title, wired rows and preview (russian-monologue).
+func _on_compact_cards(enabled: bool) -> void:
+	ConfigManager.set_config("compact_cards", enabled)
+	EventBus.refresh_graph.emit()
 
 
 ## Faces and item icons beside names (russian-monologue); see Pictures.

@@ -12,10 +12,11 @@ const WRITERS: Array = ["variable", "input"]
 
 static var _instance: ProblemsWindow
 
-var _problems: Tree
+var _errors_pill: Label
+var _warnings_pill: Label
+var _problems_container: VBoxContainer
 var _usage_target: OptionButton
 var _usages: Tree
-var _summary: Label
 var _path_target: OptionButton
 var _paths: Tree
 
@@ -44,17 +45,30 @@ func _init() -> void:
 	var problems_page: VBoxContainer = VBoxContainer.new()
 	problems_page.name = "Problems"
 	tabs.add_child(problems_page)
-	var bar: HBoxContainer = HBoxContainer.new()
-	problems_page.add_child(bar)
+
+	var pill_bar: HBoxContainer = HBoxContainer.new()
+	pill_bar.add_theme_constant_override("separation", 8)
+	problems_page.add_child(pill_bar)
+
+	_errors_pill = _make_pill(Color(0.85, 0.22, 0.22))
+	pill_bar.add_child(_errors_pill)
+	_warnings_pill = _make_pill(Color(0.88, 0.60, 0.12))
+	pill_bar.add_child(_warnings_pill)
+
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	problems_page.add_child(scroll)
+
+	_problems_container = VBoxContainer.new()
+	_problems_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_problems_container.add_theme_constant_override("separation", 8)
+	scroll.add_child(_problems_container)
+
 	var recheck: Button = Button.new()
-	recheck.text = "Check again"
+	recheck.text = tr("↻ Check again")
 	recheck.pressed.connect(_fill_problems)
-	bar.add_child(recheck)
-	_summary = Label.new()
-	bar.add_child(_summary)
-	_problems = _make_tree(["", "Where", "What"])
-	_problems.item_activated.connect(_on_row_activated.bind(_problems))
-	problems_page.add_child(_problems)
+	problems_page.add_child(recheck)
 
 	# --- usages ---
 	var usages_page: VBoxContainer = VBoxContainer.new()
@@ -108,20 +122,132 @@ func _make_tree(columns: Array) -> Tree:
 # ---------- problems ----------
 
 func _fill_problems() -> void:
-	_problems.clear()
-	var root: TreeItem = _problems.create_item()
+	for child: Node in _problems_container.get_children():
+		child.queue_free()
+
 	var project: MonologueProject = ProjectManager.current_project
 	if project == null:
+		_errors_pill.text = _count_label(0, true)
+		_warnings_pill.text = _count_label(0, false)
 		return
-	var count: int = 0
+
+	var errors_count: int = 0
+	var warnings_count: int = 0
+
 	for issue: ValidationIssue in ValidationService.validate_project(project).issues:
-		var mark: String = "⛔" if issue.severity == ValidationIssue.Severity.ERROR else "⚠"
-		_add_row(root, [mark, _where(project, issue.object_id, issue.document_name), _translated(issue.message)], issue.object_id)
-		count += 1
+		var is_err: bool = (issue.severity == ValidationIssue.Severity.ERROR)
+		if is_err:
+			errors_count += 1
+		else:
+			warnings_count += 1
+		var card: PanelContainer = _make_card(
+			is_err,
+			_translated(issue.message),
+			_where(project, issue.object_id, issue.document_name),
+			issue.object_id
+		)
+		_problems_container.add_child(card)
+
 	for extra: Array in _extra_checks(project):
-		_add_row(root, [extra[0], _where(project, extra[1], ""), extra[2]], extra[1])
-		count += 1
-	_summary.text = tr("Nothing to fix.") if count == 0 else tr("%d to look at") % count
+		warnings_count += 1
+		var card: PanelContainer = _make_card(
+			false,
+			str(extra[2]),
+			_where(project, extra[1], ""),
+			str(extra[1])
+		)
+		_problems_container.add_child(card)
+
+	_errors_pill.text = _count_label(errors_count, true)
+	_warnings_pill.text = _count_label(warnings_count, false)
+	# a pill with nothing to report steps back
+	_errors_pill.modulate.a = 1.0 if errors_count > 0 else 0.35
+	_warnings_pill.modulate.a = 1.0 if warnings_count > 0 else 0.35
+
+
+func _make_pill(bg_color: Color) -> Label:
+	var pill: Label = Label.new()
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = bg_color
+	style.set_corner_radius_all(10)
+	style.content_margin_left = 10.0
+	style.content_margin_right = 10.0
+	style.content_margin_top = 4.0
+	style.content_margin_bottom = 4.0
+	pill.add_theme_stylebox_override("normal", style)
+	pill.add_theme_color_override("font_color", Color.WHITE)
+	pill.add_theme_font_size_override("font_size", 12)
+	return pill
+
+
+func _make_card(is_error: bool, message: String, location: String, object_id: String) -> PanelContainer:
+	var card: PanelContainer = PanelContainer.new()
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.12, 0.12, 0.14)
+	var border_color: Color = Color(0.85, 0.22, 0.22) if is_error else Color(0.88, 0.60, 0.12)
+	style.border_color = border_color
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(8)
+	style.set_content_margin_all(10)
+	card.add_theme_stylebox_override("panel", style)
+
+	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	card.add_child(vbox)
+
+	var tag: Label = Label.new()
+	tag.text = tr("ERROR") if is_error else tr("WARNING")
+	tag.add_theme_color_override("font_color", border_color)
+	tag.add_theme_font_size_override("font_size", 11)
+	vbox.add_child(tag)
+
+	var msg: Label = Label.new()
+	msg.text = message
+	msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	msg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(msg)
+
+	var bottom_row: HBoxContainer = HBoxContainer.new()
+	bottom_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(bottom_row)
+
+	var loc_label: Label = Label.new()
+	loc_label.text = location
+	loc_label.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65))
+	loc_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	loc_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	bottom_row.add_child(loc_label)
+
+	var link_btn: Button = Button.new()
+	link_btn.flat = true
+	link_btn.text = tr("Go to →")
+	link_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	if not object_id.is_empty():
+		link_btn.pressed.connect(_jump_to_object.bind(object_id))
+	else:
+		link_btn.visible = false
+	bottom_row.add_child(link_btn)
+
+	return card
+
+
+## «3 ошибки» in Russian, «3 errors» otherwise.
+func _count_label(count: int, errors: bool) -> String:
+	if TranslationServer.get_locale().begins_with("ru"):
+		return _format_plural(count, "ошибка", "ошибки", "ошибок") if errors else _format_plural(count, "предупреждение", "предупреждения", "предупреждений")
+	return "%d %s" % [count, ("error" if count == 1 else "errors") if errors else ("warning" if count == 1 else "warnings")]
+
+
+func _format_plural(count: int, form1: String, form2: String, form5: String) -> String:
+	var c: int = abs(count) % 100
+	var c1: int = c % 10
+	if c > 10 and c < 20:
+		return "%d %s" % [count, form5]
+	if c1 > 1 and c1 < 5:
+		return "%d %s" % [count, form2]
+	if c1 == 1:
+		return "%d %s" % [count, form1]
+	return "%d %s" % [count, form5]
 
 
 ## Messages built from a field name («Image is required.») are translated piece by piece.
@@ -304,15 +430,19 @@ func _find_node(project: MonologueProject, object_id: String) -> Array:
 	return []
 
 
-func _on_row_activated(tree: Tree) -> void:
-	var item: TreeItem = tree.get_selected()
-	if item == null:
-		return
+func _jump_to_object(object_id: String) -> void:
 	var project: MonologueProject = ProjectManager.current_project
-	var found: Array = _find_node(project, str(item.get_metadata(0)))
+	var found: Array = _find_node(project, object_id)
 	if found.is_empty():
 		return
 	var storyline: StorylineDocument = found[0]
 	var selection: Array[InspectableObject] = [found[1]]
 	EventBus.request_storyline_inspection.emit(storyline)
 	EventBus.request_nodes_selection.emit(selection, storyline.id, false)
+
+
+func _on_row_activated(tree: Tree) -> void:
+	var item: TreeItem = tree.get_selected()
+	if item == null:
+		return
+	_jump_to_object(str(item.get_metadata(0)))

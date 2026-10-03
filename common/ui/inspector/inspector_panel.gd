@@ -113,7 +113,8 @@ func rebuild() -> void:
 		)
 	else:
 		if inspected.size() > 1:
-			_add_notice("Editing %d objects at once." % inspected.size())
+			_add_notice(tr("Editing %d objects at once.") % inspected.size())
+			_add_delete_all(inspected)
 
 		var categories: Dictionary = _group_by_category(properties)
 
@@ -507,3 +508,33 @@ func _on_back_button_pressed() -> void:
 static func _label_of(property: Property) -> String:
 	var custom: String = str(property.get_settings_value(PropertySettings.KEY_LABEL, ""))
 	return custom if not custom.is_empty() else property.name
+
+
+## «Delete N nodes» under the notice when several graph nodes are selected (russian-monologue).
+## Goes the same way as the Delete key, so a section still asks first.
+func _add_delete_all(inspected: Array[InspectableObject]) -> void:
+	var ids: Array[StringName] = []
+	for object: InspectableObject in inspected:
+		if object is not InspectableNode:
+			return
+		ids.append(StringName(object.get_id()))
+	var graph: MonologueGraphEdit = _find_graph(get_tree().root)
+	if graph == null:
+		return
+	var button: Button = Button.new()
+	button.text = tr("Delete %d nodes") % ids.size()
+	button.flat = true
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.add_theme_color_override("font_color", Color("#e06c6c"))
+	button.pressed.connect(func() -> void: graph._on_delete_nodes_request(ids))
+	field_container.add_child(button)
+
+
+static func _find_graph(node: Node) -> MonologueGraphEdit:
+	if node is MonologueGraphEdit:
+		return node
+	for child: Node in node.get_children():
+		var found: MonologueGraphEdit = _find_graph(child)
+		if found:
+			return found
+	return null

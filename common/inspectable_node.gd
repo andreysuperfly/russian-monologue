@@ -26,6 +26,14 @@ func _init(command_manager: CommandManager = null) -> void:
 		.hidden_in_graph()
 		.not_exposable())
 
+	# a colour for the card, to mark branches and states (russian-monologue); transparent = none
+	define_property(Property.new("extra/node_color")
+		.set_type("color")
+		.default("#00000000")
+		.label("Node color")
+		.hidden_in_graph()
+		.not_exposable())
+
 	define_property(Property.new("extra/editor_position")
 		.set_type("vector2")
 		.hidden_in_graph()

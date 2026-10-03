@@ -359,6 +359,11 @@ func _reconnect_all_slots() -> void:
 
 	var storyline: StorylineDocument = get_storyline()
 	var all_connections: Array[Dictionary] = connection_manager.get_all_connections()
+	for view: GraphNode in get_all_graph_nodes():
+		for child: Node in view.get_children():
+			if child.has_meta(&"jump_link"):
+				view.remove_child(child)
+				child.queue_free()
 
 	for conn: Dictionary in all_connections:
 		var from_node_id: String = conn["from_node_id"]
@@ -379,7 +384,12 @@ func _reconnect_all_slots() -> void:
 		var to_port: int = get_port_index_for_property(to_view_name, to_property, false)
 
 		if from_port >= 0 and to_port >= 0:
-			connect_node(from_view_name, from_port, to_view_name, to_port)
+			# a wire back to the left (to a hub, a scene above) reads as a link on the card
+			# instead of a line across the whole graph; the model keeps it (russian-monologue)
+			if to_node.graph_view.position_offset.x < from_node.graph_view.position_offset.x - 40.0:
+				_add_jump_link(from_node, from_property, to_node)
+			else:
+				connect_node(from_view_name, from_port, to_view_name, to_port)
 
 
 func _get_visible_properties(node: InspectableNode) -> Array[Property]:
@@ -919,3 +929,33 @@ static func _what_goes_too(sections: Array[StorylineDocument]) -> String:
 	if named.size() == 1:
 		return "The section %s goes too, with the %s in it." % [named[0], counted]
 	return "The sections %s go too, with the %s in them." % [", ".join(named), counted]
+
+
+## «↩ hub» (or «Уйти. ↩ hub» for an option) at the bottom of the card; pressing it goes there.
+func _add_jump_link(from_node: InspectableNode, from_property: String, to_node: InspectableNode) -> void:
+	var target: String = (
+		str(to_node.get_property_value("key")) if to_node.get_type() == "genius_scene" else to_node.graph_view.title
+	)
+	var prefix: String = ""
+	if from_property.contains(NodeConnection.ITEM_SEPARATOR):
+		var item_id: String = from_property.get_slice(NodeConnection.ITEM_SEPARATOR, 1).trim_prefix(NodeConnection.EXTERNAL_PREFIX)
+		var options: Variant = from_node.get_property_value("choices")
+		if options is Array:
+			for option: Variant in options:
+				if option is Dictionary and str(option.get("id", "")) == item_id:
+					prefix = NodePreview.trim(Util.to_label(option.get("text", {}), ProjectManager.current_project.active_language_code), 22) + "  "
+	var link: Button = Button.new()
+	link.set_meta(&"jump_link", true)
+	link.text = "%s↩ %s" % [prefix, target]
+	link.tooltip_text = tr("Go to %s") % target
+	link.flat = true
+	link.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	link.focus_mode = Control.FOCUS_NONE
+	link.mouse_filter = Control.MOUSE_FILTER_STOP
+	link.add_theme_font_size_override("font_size", 12)
+	link.add_theme_color_override("font_color", Color("#d77a6a"))
+	var target_view: GraphNode = to_node.graph_view
+	link.pressed.connect(func() -> void:
+		set_selected(target_view)
+		scroll_offset = target_view.position_offset * zoom - size / 2.0 + target_view.size * zoom / 2.0)
+	from_node.graph_view.add_child(link)
