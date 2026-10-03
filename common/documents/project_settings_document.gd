@@ -13,6 +13,13 @@ func initialize_properties() -> void:
 		.default({})
 		.hidden_in_inspector())
 
+	# Collections (russian-monologue): the writer's own folders of storylines and nodes, nested;
+	# see Bookmarks.
+	define_property(Property.new("bookmarks")
+		.set_type("any")
+		.default([])
+		.hidden_in_inspector())
+
 	define_property(Property.new("journeys")
 		.set_type("any")
 		.default({})

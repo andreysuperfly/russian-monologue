@@ -742,6 +742,18 @@ func _offer_on_selection(at_position: Vector2) -> void:
 	menu.add_item("Extract into a Section", OFFER_EXTRACT)
 	menu.add_item("Remove, Keeping the Chain", OFFER_BRIDGE_OUT)
 	menu.add_item("Save as template…", OFFER_TEMPLATE)
+	# into one of the writer's collections (russian-monologue)
+	var folders: Array = Bookmarks.folder_paths()
+	if not folders.is_empty():
+		var into: PopupMenu = PopupMenu.new()
+		into.name = "into"
+		for index: int in folders.size():
+			into.add_item(str(folders[index][1]), index)
+		into.id_pressed.connect(func(index: int) -> void:
+			for node: InspectableNode in selection:
+				Bookmarks.add_item(str(folders[index][0]), {"kind": "node", "storyline": storyline_id, "node": node.get_id()}))
+		menu.add_child(into)
+		menu.add_submenu_node_item(tr("Add to a collection"), into)
 	menu.id_pressed.connect(_on_offer_chosen.bind(selection))
 	menu.popup_hide.connect(menu.queue_free)
 	add_child(menu)

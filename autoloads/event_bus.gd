@@ -42,6 +42,8 @@ signal open_files_request(
 signal open_dir_request(callable: Callable, root_subdir: String, options: Array[Dictionary])
 
 
+## The writer's collections changed (russian-monologue).
+signal bookmarks_changed
 signal show_welcome
 signal hide_welcome
 ## Opens the window listing every translatable line in the project.

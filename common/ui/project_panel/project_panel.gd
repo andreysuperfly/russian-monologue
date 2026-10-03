@@ -58,6 +58,17 @@ func _rebuild_explorer() -> void:
 	collections_container = VBoxContainer.new()
 	collections_fc.add_child(collections_container)
 
+	# the writer's own folders, above the plain list of everything (russian-monologue)
+	var bookmarks_fc: FoldableContainer = _create_foldable_container("Collections of mine")
+	var bookmarks: BookmarksPanel = BookmarksPanel.new()
+	bookmarks_fc.add_child(bookmarks)
+	var new_folder: Button = Button.new()
+	new_folder.theme_type_variation = "IconButton"
+	new_folder.icon = add_icon
+	new_folder.tooltip_text = tr("New folder")
+	new_folder.pressed.connect(func() -> void: Bookmarks.add_folder("", tr("New folder")))
+	bookmarks_fc.add_title_bar_control(new_folder)
+
 	storylines_fc = _create_foldable_container("Storylines")
 	storylines_container = VBoxContainer.new()
 	storylines_fc.add_child(storylines_container)
@@ -143,7 +154,14 @@ func _add_document_rows(
 
 		row.add_child(button)
 		storylines_container.add_child(row)
-		InlineRename.attach(button).committed.connect(_on_storyline_renamed.bind(document))
+		var renamer: InlineRename = InlineRename.attach(button)
+		renamer.committed.connect(_on_storyline_renamed.bind(document))
+		# right-click: rename, add to a collection, delete; Delete/⌫ deletes (russian-monologue)
+		button.gui_input.connect(func(event: InputEvent) -> void:
+			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
+				_offer_on_storyline(document, renamer, button)
+			elif event is InputEventKey and event.pressed and event.keycode in [KEY_DELETE, KEY_BACKSPACE]:
+				_ask_delete_storyline(document))
 
 		_add_document_rows(
 			ProjectManager.current_project.get_sections_of(document.id), depth + 1, group
@@ -235,3 +253,52 @@ func _let_the_list_scroll() -> void:
 	holder.move_child(scroll, project_explorer.get_index())
 	project_explorer.reparent(scroll, false)
 	project_explorer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+
+# ---------- right-click on a storyline (russian-monologue) ----------
+
+func _offer_on_storyline(document: StorylineDocument, renamer: InlineRename, button: Button) -> void:
+	var menu: PopupMenu = PopupMenu.new()
+	menu.add_item(tr("Open"), 0)
+	menu.add_item(tr("Rename"), 1)
+	var folders: Array = Bookmarks.folder_paths()
+	if not folders.is_empty():
+		var into: PopupMenu = PopupMenu.new()
+		into.name = "into"
+		for index: int in folders.size():
+			into.add_item(str(folders[index][1]), index)
+		into.id_pressed.connect(func(index: int) -> void:
+			Bookmarks.add_item(str(folders[index][0]), {"kind": "storyline", "storyline": document.id}))
+		menu.add_child(into)
+		menu.add_submenu_node_item(tr("Add to a collection"), into)
+	menu.add_separator()
+	menu.add_item(tr("Delete…"), 2)
+	menu.id_pressed.connect(func(id: int) -> void:
+		if id == 0:
+			EventBus.request_storyline_inspection.emit(document)
+		elif id == 1:
+			renamer.open()
+		elif id == 2:
+			_ask_delete_storyline(document))
+	menu.popup_hide.connect(menu.queue_free)
+	add_child(menu)
+	menu.position = Vector2i(button.get_screen_position() + Vector2(24, button.size.y))
+	menu.popup()
+
+
+func _ask_delete_storyline(document: StorylineDocument) -> void:
+	var project: MonologueProject = ProjectManager.current_project
+	if project == null:
+		return
+	if not document.is_section() and project.top_level_storylines().size() <= 1:
+		Log.warn(tr("The storyline couldn't be removed, it's the only one left."))
+		return
+	EventBus.ask_dialog.emit(
+		func(response: int) -> void:
+			if response != Prompt.CONFIRMED:
+				return
+			project.delete_storyline(document)
+			Bookmarks.forget_storyline(document.id)
+			EventBus.request_storyline_inspection.emit(project.top_level_storylines()[0]),
+		tr("Are you sure?"),
+		tr("You are about to delete the storyline '%s'.") % document.name)
