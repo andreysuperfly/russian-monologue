@@ -20,7 +20,9 @@ func test_a_path_declares_a_category_and_a_name() -> void:
 	var speaker := (
 		Property.new("speaker/name").set_type("text").label("Who speaks").category("Cast")
 	)
-	assert_str(speaker.get_display_name()).is_equal("Who Speaks")
+	# a label reads exactly as written; only a bare name is made readable
+	assert_str(speaker.get_display_name()).is_equal("Who speaks")
+	assert_str(Property.new("speaker/voice_line").set_type("text").get_display_name()).is_equal("Voice Line")
 	assert_str(speaker.get_category()).is_equal("Cast")
 
 
