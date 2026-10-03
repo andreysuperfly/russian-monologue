@@ -55,14 +55,13 @@ func _run_search(query: String) -> void:
 	_refresh_ui()
 
 
+## Every word, in the line, the options, the speaker, notes and conditions (russian-monologue).
 func _node_matches(node: InspectableNode, query_lower: String) -> bool:
-	# TODO: Improve query
-
-	for property: Property in node.get_properties():
-		var value: Variant = property.get_value()
-		if value is String and value.to_lower().contains(query_lower):
-			return true
-	return false
+	var language: String = ProjectManager.current_project.active_language_code if ProjectManager.current_project else ""
+	var all: String = ""
+	for part: Dictionary in ProjectSearch._texts_of(node, language):
+		all += " " + ProjectSearch.normalize(part["text"])
+	return ProjectSearch.has_all(all, ProjectSearch.words_of(query_lower))
 
 
 func _navigate(direction: int) -> void:

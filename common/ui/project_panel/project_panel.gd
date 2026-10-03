@@ -19,6 +19,7 @@ var _open_storyline: StorylineDocument
 
 func _ready() -> void:
 	_let_the_list_scroll()
+	_hook_search()
 	ProjectManager.project_loaded.connect(_rebuild_explorer)
 	EventBus.request_objects_inspection.connect(_on_request_objects_inspection)
 	EventBus.request_storyline_inspection.connect(_on_request_storyline_inspection)
@@ -260,6 +261,41 @@ func _let_the_list_scroll() -> void:
 	holder.move_child(scroll, project_explorer.get_index())
 	project_explorer.reparent(scroll, false)
 	project_explorer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+
+
+# ---------- search over the whole project (russian-monologue) ----------
+
+var _results: SearchResults
+var _search_wait: Timer
+
+
+func _hook_search() -> void:
+	var box: LineEdit = get_node_or_null("VBox/Header/SearchBar")
+	if box == null:
+		return
+	box.placeholder_text = tr("Search the whole project")
+	box.clear_button_enabled = true
+	var list: Control = project_explorer.get_parent()
+	_results = SearchResults.new()
+	list.get_parent().add_child(_results)
+	list.get_parent().move_child(_results, list.get_index() + 1)
+	_search_wait = Timer.new()
+	_search_wait.one_shot = true
+	_search_wait.wait_time = 0.15
+	add_child(_search_wait)
+	_search_wait.timeout.connect(func() -> void:
+		_results.show_for(box.text)
+		list.visible = box.text.strip_edges().is_empty())
+	box.text_changed.connect(func(_text: String) -> void: _search_wait.start())
+	box.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+			box.clear()
+			_search_wait.start())
+	ProjectManager.project_loaded.connect(func() -> void:
+		box.clear()
+		_results.show_for("")
+		list.show())
 
 
 # ---------- right-click on a storyline (russian-monologue) ----------

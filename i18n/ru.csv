@@ -525,6 +525,11 @@ Thank you very much for using Monologue!","[center][b]Russian Monologue[/b][/cen
 Нашли ошибку — напишите о ней на [url=https://github.com/andreysuperfly/russian-monologue/issues]GitHub[/url].
 
 Спасибо, что пользуетесь!"
+Search the whole project,Поиск по всему проекту
+"Nothing found. Every word must be somewhere in the line, the speaker or the storyline's name.","Ничего не нашлось. Каждое слово должно быть в реплике, у говорящего или в названии диалога."
+storylines: %d,диалогов: %d
+places: %d,мест: %d
+places: %d+,мест: %d+
 Collections of mine,Подборки
 New folder,Новая папка
 New folder inside,Новая папка внутри
