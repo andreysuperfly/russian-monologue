@@ -161,6 +161,15 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 			shown = _coloured_row_label(key_label, is_fallback)
 		if idx > 0:
 			body_rows.append(container)
+			# the row under the pointer lights up a little (russian-monologue)
+			container.mouse_entered.connect(func() -> void:
+				container.set_meta(&"lit", true)
+				container.queue_redraw())
+			container.mouse_exited.connect(func() -> void:
+				if not Rect2(Vector2.ZERO, container.size).has_point(container.get_local_mouse_position()):
+					container.set_meta(&"lit", false)
+					container.queue_redraw())
+			container.draw.connect(_draw_row_light.bind(container))
 
 		container.add_child(shown)
 		# a small «→» on a wired answer or branch: goes to the card it leads to, however far
@@ -551,7 +560,7 @@ static func _coloured_row_label(plain_label: Label, fallback: bool) -> RichTextL
 	return label
 
 
-## The inset panel the rows lie on, a little darker than the card, a fine line between rows.
+## The inset panel the rows lie on, a little darker than the card.
 static func _draw_body(graph_node: GraphNode) -> void:
 	var rows: Array = graph_node.get_meta(&"body_rows", [])
 	var shown: Array = rows.filter(func(r: Variant) -> bool: return is_instance_valid(r) and (r as Control).visible)
@@ -566,10 +575,16 @@ static func _draw_body(graph_node: GraphNode) -> void:
 	box.bg_color = Color(0, 0, 0, 0.2)
 	box.set_corner_radius_all(6)
 	graph_node.draw_style_box(box, panel)
-	for k: int in range(1, shown.size()):
-		var above: Control = shown[k - 1]
-		var y: float = roundf((above.position.y + above.size.y + (shown[k] as Control).position.y) / 2.0) + 0.5
-		graph_node.draw_line(Vector2(panel.position.x + 6.0, y), Vector2(panel.end.x - 6.0, y), Color(1, 1, 1, 0.06), 1.0)
+
+
+## A lit row: a slightly lighter patch across the panel's width.
+static func _draw_row_light(row: Control) -> void:
+	if not row.get_meta(&"lit", false):
+		return
+	var light: StyleBoxFlat = StyleBoxFlat.new()
+	light.bg_color = Color(1, 1, 1, 0.05)
+	light.set_corner_radius_all(4)
+	row.draw_style_box(light, Rect2(-4.0, -2.0, row.size.x + 8.0, row.size.y + 4.0))
 
 
 ## A kind's hue for the strip: the same hue its box is shown in, lighter and quieter.
