@@ -279,6 +279,11 @@ static func _build_rows(node: InspectableNode) -> Array[GraphNodeRow]:
 			continue
 
 		var row: GraphNodeRow = _build_property_row(prop, node)
+		# a node can word a row itself, as a fork's «иначе» says where it leads (russian-monologue)
+		if node.has_method("row_text"):
+			var own: String = str(node.call("row_text", prop.name))
+			if not own.is_empty():
+				row._key = own
 		if prop.get_settings_value("is_main_property"):
 			rows.push_front(row)
 			continue
