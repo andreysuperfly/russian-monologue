@@ -85,10 +85,11 @@ func _finish(keep: bool) -> void:
 	_node.set_property_value(PROPERTY, value)
 
 
-static func _shrink(graph_node: GraphNode) -> void:
-	if is_instance_valid(graph_node):
-		graph_node.size = Vector2.ZERO
-		graph_node.reset_size()
+static func _shrink(graph_node: Variant) -> void:
+	# may already be gone, when the editor closes with the whole graph
+	if is_instance_valid(graph_node) and graph_node is GraphNode:
+		(graph_node as GraphNode).size = Vector2.ZERO
+		(graph_node as GraphNode).reset_size()
 
 
 static func _language() -> String:

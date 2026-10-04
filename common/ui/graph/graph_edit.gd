@@ -135,9 +135,7 @@ func add_graph_node_view(node: InspectableNode) -> GraphNode:
 	if node is SectionNode and not graph_node.gui_input.is_connected(_on_section_view_input):
 		graph_node.gui_input.connect(_on_section_view_input.bind(node))
 
-	if node.get_type() == "sentence":
-		graph_node.gui_input.connect(_on_sentence_view_input.bind(graph_node, node))
-	graph_node.gui_input.connect(_note_press_on_text.bind(graph_node))
+	graph_node.gui_input.connect(_on_card_input.bind(graph_node, node))
 
 	add_child(graph_node)
 	if not node.property_changed.is_connected(_on_inspectable_node_property_changed):
@@ -165,30 +163,32 @@ func _on_section_view_input(event: InputEvent, node: InspectableNode) -> void:
 	EventBus.request_storyline_inspection.emit.call_deferred(section)
 
 
-## A press on a card's text picks the card but leaves the inspector shut; the frame around the
-## text opens it (russian-monologue). Read by the graph container while the press lasts.
+## Set while a press on the graph is being handled (russian-monologue): a selection made with
+## the mouse leaves the inspector shut until a double click. Read by the graph container.
 var pressed_on_text: bool = false
 ## The view is about to move to another spot of the same storyline; back/forward remember it.
 signal jumped
 
 
-func _note_press_on_text(event: InputEvent, graph_node: GraphNode) -> void:
+## One click picks a card, nothing more. A double click on its frame opens its fields on the
+## right; on a line's text it writes the line right there (russian-monologue).
+func _on_card_input(event: InputEvent, graph_node: GraphNode, node: InspectableNode) -> void:
 	var press: InputEventMouseButton = event as InputEventMouseButton
 	if press == null or not press.pressed or press.button_index != MOUSE_BUTTON_LEFT:
 		return
-	var text: Control = graph_node.get_node_or_null(NodePath(GraphNodeViewFactory.PREVIEW_NAME))
-	pressed_on_text = text != null and text.visible and Rect2(text.position, text.size).has_point(press.position)
-	if pressed_on_text:
-		get_tree().create_timer(0.2).timeout.connect(func() -> void: pressed_on_text = false)
-
-
-## Double-click a line's card to write the line right there (russian-monologue).
-func _on_sentence_view_input(event: InputEvent, graph_node: GraphNode, node: InspectableNode) -> void:
-	var click: InputEventMouseButton = event as InputEventMouseButton
-	if click == null or not click.double_click or click.button_index != MOUSE_BUTTON_LEFT:
+	# a press in the graph: whatever it selects, the inspector waits for a double click
+	pressed_on_text = true
+	get_tree().create_timer(0.3).timeout.connect(func() -> void: pressed_on_text = false)
+	if not press.double_click or node is SectionNode:
 		return
+	var text: Control = graph_node.get_node_or_null(NodePath(GraphNodeViewFactory.PREVIEW_NAME))
+	var on_text: bool = text != null and text.visible and Rect2(text.position, text.size).has_point(press.position)
 	accept_event()
-	CardTextEditor.open.call_deferred(graph_node, node)
+	if on_text and node.get_type() == "sentence":
+		CardTextEditor.open.call_deferred(graph_node, node)
+		return
+	var selection: Array[InspectableObject] = [node]
+	EventBus.request_objects_inspection.emit.call_deferred(selection)
 
 
 func _on_inspectable_node_property_changed(property_name: String, node: InspectableNode) -> void:
@@ -484,12 +484,6 @@ func get_property_name_at_port(node_name: String, port_index: int, is_output: bo
 func _on_end_node_move() -> void:
 	if _pending_positions.is_empty():
 		return
-	# moved by its text: now that it was really taken in hand, show its fields (russian-monologue)
-	pressed_on_text = false
-	var held: Array[InspectableObject] = []
-	held.assign(get_selected_nodes())
-	if not held.is_empty():
-		EventBus.request_objects_inspection.emit.call_deferred(held)
 
 	# One node let go on a wire joins the chain there, which a whole selection dropped at
 	# once would not say clearly enough.

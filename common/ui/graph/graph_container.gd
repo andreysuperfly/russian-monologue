@@ -199,12 +199,10 @@ func _apply_selection(nodes: Array[InspectableObject], storyline_id: String) -> 
 		else:
 			node.graph_view.selected = true
 
-	# picked by its text: selected, but the inspector stays shut (russian-monologue)
-	if graph.pressed_on_text and nodes.size() == 1:
+	# picked with the mouse on the graph: selected only, the fields open on a double click
+	# (russian-monologue); picked from search, where-used or undo: shown as before
+	if graph.pressed_on_text:
 		EventBus.request_objects_inspection.emit([] as Array[InspectableObject])
-	# still holding the button, maybe to drag: the fields open when it is let go, not on the press
-	elif Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not nodes.is_empty():
-		_inspect_on_release = nodes
 	else:
 		EventBus.request_objects_inspection.emit(nodes)
 	_is_applying_selection = false
@@ -260,16 +258,3 @@ static func _spring() -> Control:
 	spring.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spring.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return spring
-
-
-# ---------- the inspector waits for the button to be let go (russian-monologue) ----------
-
-var _inspect_on_release: Array[InspectableObject] = []
-
-
-func _process(_delta: float) -> void:
-	if _inspect_on_release.is_empty() or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-		return
-	var nodes: Array[InspectableObject] = _inspect_on_release
-	_inspect_on_release = []
-	EventBus.request_objects_inspection.emit(nodes)
