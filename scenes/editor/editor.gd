@@ -380,6 +380,8 @@ func _remember_place(storyline: StorylineDocument) -> void:
 	var project: MonologueProject = ProjectManager.current_project
 	if project == null or project.project_path.is_empty() or storyline == null:
 		return
+	if ProjectManager.is_scratch(project.project_path):
+		return
 	var places: Dictionary = _places()
 	places[project.project_path] = storyline.id
 	var file: FileAccess = FileAccess.open(PLACE_PATH, FileAccess.WRITE)

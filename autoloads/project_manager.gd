@@ -80,6 +80,8 @@ func load_project_from_path(path: String) -> void:
 
 func add_path_to_history(path: String) -> void:
 	var entry: String = path.simplify_path()
+	if is_scratch(entry):
+		return
 	var paths: Array = get_history() as Array
 	paths.erase(entry)
 	paths.push_front(entry)
@@ -120,8 +122,18 @@ func _parse_history(text: String) -> Array:
 
 	var data: Variant = reader.data
 	if data is Array:
-		return data.filter(func(p: Variant) -> bool: return _still_there(str(p)))
+		return data.filter(func(p: Variant) -> bool: return _still_there(str(p)) and not is_scratch(str(p)))
 	return []
+
+
+## A copy in a temporary folder (a test run, a file opened from an archive) is not a project to
+## come back to: kept in the recent list, it opened at start instead of the real one and edits
+## went into a copy nothing reads (russian-monologue).
+static func is_scratch(path: String) -> bool:
+	for root: String in ["/tmp/", "/private/tmp/", "/var/folders/", "/private/var/folders/"]:
+		if path.begins_with(root):
+			return true
+	return false
 
 
 ## An unpacked project is a folder, not a file, and FileAccess.file_exists() says no to a
