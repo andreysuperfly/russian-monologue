@@ -81,7 +81,16 @@ func is_section() -> bool:
 
 
 ## Hidden for a storyline at the top, which has nowhere to go back to.
+var _title: Label
+
+
 func _show_trail(document: StorylineDocument) -> void:
+	if _title:
+		var names: PackedStringArray = PackedStringArray()
+		for step: StorylineDocument in _path_to(document):
+			names.append(step.name)
+		_title.text = " › ".join(names)
+		_title.tooltip_text = _title.text
 	for child: Node in trail.get_children():
 		trail.remove_child(child)
 		child.queue_free()
@@ -242,7 +251,18 @@ func _lay_header_in_a_row() -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	header.add_child(row)
 	var center: Control = header.get_node("HeaderCenter")
-	var parts: Array = [header.get_node("HeaderLeft"), _spring(), center, _spring(), header.get_node("HeaderRight")]
+	# the open storyline's name, so it is always clear which one is on the graph (russian-monologue)
+	_title = Label.new()
+	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_title.size_flags_stretch_ratio = 1.4
+	_title.custom_minimum_size.x = 60
+	_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_title.mouse_filter = Control.MOUSE_FILTER_PASS
+	_title.add_theme_font_size_override("font_size", 17)
+	_title.add_theme_color_override("font_color", Color(0.93, 0.9, 0.84))
+	var parts: Array = [header.get_node("HeaderLeft"), _title, center, _spring(), header.get_node("HeaderRight")]
 	for part: Control in parts:
 		if part.get_parent():
 			part.reparent(row, false)

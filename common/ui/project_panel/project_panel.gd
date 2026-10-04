@@ -15,6 +15,7 @@ var storylines_container: VBoxContainer
 
 ## The storyline the graph is showing, so a rebuild puts the highlight back where it was.
 var _open_storyline: StorylineDocument
+var _list_scroll: ScrollContainer
 
 
 func _ready() -> void:
@@ -126,6 +127,8 @@ func _add_grouped_rows(documents: Array[StorylineDocument], button_group: Button
 		var first: int = storylines_container.get_child_count()
 		_add_document_rows(groups[title], 1, button_group)
 		var rows: Array[Node] = storylines_container.get_children().slice(first)
+		for r: Node in rows:
+			r.set_meta(&"group_header", header)
 		header.pressed.connect(func() -> void:
 			var open: bool = not rows.is_empty() and rows[0].visible
 			for r: Node in rows: r.visible = not open
@@ -248,12 +251,33 @@ func _on_request_storyline_inspection(storyline: StorylineDocument) -> void:
 	_open_storyline = storyline
 	for button: Button in _document_buttons():
 		button.set_pressed_no_signal(button.get_meta("document") == storyline)
+	_bring_open_into_view.call_deferred()
+
+
+## The open storyline's row is lit, but that is no use below the fold or in a shut group: open
+## the group and scroll the list to it (russian-monologue).
+func _bring_open_into_view() -> void:
+	var lit: Button = null
+	for button: Button in _document_buttons():
+		if button.get_meta("document") == _open_storyline:
+			lit = button
+	if lit == null:
+		return
+	if storylines_fc and storylines_fc.folded:
+		storylines_fc.folded = false
+	var row: Node = lit.get_parent()
+	if not row.visible and row.has_meta(&"group_header"):
+		(row.get_meta(&"group_header") as Button).pressed.emit()
+	await get_tree().process_frame
+	if is_instance_valid(_list_scroll) and is_instance_valid(lit) and lit.is_visible_in_tree():
+		_list_scroll.ensure_control_visible(lit)
 
 
 ## A project with many storylines made the list taller than the window, and Godot then pushed
 ## the whole editor up under the title bar. The list scrolls instead (russian-monologue).
 func _let_the_list_scroll() -> void:
 	var scroll: ScrollContainer = ScrollContainer.new()
+	_list_scroll = scroll
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var holder: Node = project_explorer.get_parent()

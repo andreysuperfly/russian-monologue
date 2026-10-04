@@ -53,6 +53,9 @@ func _ready() -> void:
 	add_child(popup_menu)
 
 	tree.item_selected.connect(_on_item_selected)
+	EventBus.request_storyline_inspection.connect(func(storyline: StorylineDocument) -> void:
+		_open_storyline_id = storyline.id if storyline else ""
+		_repaint_open(tree.get_root()))
 	tree.item_activated.connect(_on_item_activated)
 	tree.item_collapsed.connect(_on_item_collapsed)
 	tree.item_edited.connect(_on_item_edited)
@@ -177,7 +180,26 @@ func _build_item_row(
 
 	item_node.set_text(0, label_text)
 	item_node.set_tooltip_text(0, storyline_name if kind == "storyline" else "%s › %s" % [storyline_name, label_text])
-	item_node.set_custom_color(0, ThemeLayout.text_muted_color)
+	item_node.set_meta("storyline", storyline_id)
+	_paint_open(item_node)
+
+
+## The storyline on the graph: its places here are lit in the accent colour (russian-monologue).
+var _open_storyline_id: String = ""
+
+
+func _paint_open(item: TreeItem) -> void:
+	var open: bool = not _open_storyline_id.is_empty() and str(item.get_meta("storyline", "")) == _open_storyline_id
+	item.set_custom_color(0, ThemeLayout.accent_color.lightened(0.35) if open else ThemeLayout.text_muted_color)
+
+
+func _repaint_open(item: TreeItem) -> void:
+	if item == null:
+		return
+	if item.has_meta("storyline"):
+		_paint_open(item)
+	for child: TreeItem in item.get_children():
+		_repaint_open(child)
 
 
 func _on_item_selected() -> void:
