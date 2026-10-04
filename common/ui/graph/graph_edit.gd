@@ -420,9 +420,9 @@ func _reconnect_all_slots() -> void:
 			# a wire back to the left (to a hub, a scene above) reads as a link on the card
 			# instead of a line across the whole graph; the model keeps it (russian-monologue)
 			if to_node.graph_view.position_offset.x < from_node.graph_view.position_offset.x - 40.0:
-				if ConfigManager.get_config("back_links_as_buttons", false) == true:
-					_add_jump_link(from_node, from_property, to_node)
-				else:
+				# a button on the card to go there, and — unless switched off — a dashed arc showing it
+				_add_jump_link(from_node, from_property, to_node)
+				if ConfigManager.get_config("back_links_as_buttons", false) != true:
 					_back_wires.append([from_node.graph_view, from_port, to_node.graph_view, to_port])
 			else:
 				connect_node(from_view_name, from_port, to_view_name, to_port)
