@@ -1227,8 +1227,30 @@ func go_to(view: GraphNode) -> void:
 	pressed_on_text = true
 	get_tree().create_timer(0.3).timeout.connect(func() -> void: pressed_on_text = false)
 	set_selected(view)
-	scroll_offset = (view.position_offset + view.size / 2.0) * zoom - size / 2.0
+	_glide_to(view)
 	flash(view)
+
+
+## How close a jump brings the card: its own size, never further in than the user already is.
+const JUMP_ZOOM: float = 1.0
+var _glide_tween: Tween
+
+
+## Slides and zooms the view gently onto [param view]'s card, rather than snapping
+## (russian-monologue).
+func _glide_to(view: GraphNode) -> void:
+	var centre: Vector2 = view.position_offset + view.size / 2.0
+	var from_zoom: float = zoom
+	var to_zoom: float = clampf(maxf(zoom, JUMP_ZOOM), zoom_min, zoom_max)
+	# the point of the graph now in the middle of the view, in graph coordinates
+	var from_centre: Vector2 = (scroll_offset + size / 2.0) / zoom
+	if _glide_tween:
+		_glide_tween.kill()
+	_glide_tween = create_tween()
+	_glide_tween.tween_method(func(t: float) -> void:
+		zoom = lerpf(from_zoom, to_zoom, t)
+		scroll_offset = from_centre.lerp(centre, t) * zoom - size / 2.0,
+		0.0, 1.0, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 ## The card being flashed and how bright its aura is now, 1 → 0.
