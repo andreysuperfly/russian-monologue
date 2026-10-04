@@ -14,6 +14,10 @@ func initialize_properties() -> void:
 		.default("100%")
 		.tooltip("Size of all text and controls. Also View → Bigger / Smaller, ⌘+ and ⌘−."))
 
+	# wires back to the left: thin dashed arcs (false) or ↩ links on the card (true)
+	define_property(Property.new("graph/back_links_as_buttons")
+		.set_type("bool")
+		.default(false))
 	define_property(Property.new("graph/compact_cards")
 		.set_type("bool")
 		.tooltip("Cards show only their title, wired rows and preview."))

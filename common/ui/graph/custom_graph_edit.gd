@@ -173,3 +173,4 @@ func _process(_delta: float) -> void:
 		return
 	_wire_zoom = zoom
 	connection_lines_thickness = maxf(1.0, _wire_thickness * minf(zoom, 1.0))
+	queue_redraw()  # dashed back wires are drawn by hand and follow the zoom

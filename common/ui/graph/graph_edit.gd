@@ -390,6 +390,8 @@ func _reconnect_all_slots() -> void:
 
 	var storyline: StorylineDocument = get_storyline()
 	var all_connections: Array[Dictionary] = connection_manager.get_all_connections()
+	_back_wires.clear()
+	queue_redraw.call_deferred()
 	for view: GraphNode in get_all_graph_nodes():
 		for child: Node in view.get_children():
 			if child.has_meta(&"jump_link"):
@@ -418,7 +420,10 @@ func _reconnect_all_slots() -> void:
 			# a wire back to the left (to a hub, a scene above) reads as a link on the card
 			# instead of a line across the whole graph; the model keeps it (russian-monologue)
 			if to_node.graph_view.position_offset.x < from_node.graph_view.position_offset.x - 40.0:
-				_add_jump_link(from_node, from_property, to_node)
+				if ConfigManager.get_config("back_links_as_buttons", false) == true:
+					_add_jump_link(from_node, from_property, to_node)
+				else:
+					_back_wires.append([from_node.graph_view, from_port, to_node.graph_view, to_port])
 			else:
 				connect_node(from_view_name, from_port, to_view_name, to_port)
 
@@ -1090,3 +1095,83 @@ func _branch_of(start: Array[InspectableNode]) -> Array[InspectableNode]:
 	var found: Array[InspectableNode] = []
 	found.assign(inside.values())
 	return found
+
+
+# ---------- wires back to the left, drawn as thin dashed arcs (russian-monologue) ----------
+# A real wire back across the graph would cross every card on the way. These are drawn under the
+# cards instead, faint, with an arrow at the end; the selected card's own ones light up.
+
+## [from_view, from_port, to_view, to_port] for each wire drawn this way.
+var _back_wires: Array = []
+var _back_wires_hooked: bool = false
+
+
+func _hook_back_wire_redraws() -> void:
+	if _back_wires_hooked:
+		return
+	_back_wires_hooked = true
+	scroll_offset_changed.connect(func(_o: Vector2) -> void: queue_redraw())
+	node_selected.connect(func(_n: Node) -> void: queue_redraw())
+	node_deselected.connect(func(_n: Node) -> void: queue_redraw())
+	child_entered_tree.connect(func(child: Node) -> void:
+		if child is GraphNode:
+			(child as GraphNode).position_offset_changed.connect(queue_redraw))
+
+
+func _draw() -> void:
+	_hook_back_wire_redraws()
+	if _back_wires.is_empty():
+		return
+	for wire: Array in _back_wires:
+		var from_view: GraphNode = wire[0]
+		var to_view: GraphNode = wire[2]
+		if not is_instance_valid(from_view) or not is_instance_valid(to_view):
+			continue
+		if wire[1] >= from_view.get_output_port_count() or wire[3] >= to_view.get_input_port_count():
+			continue
+		var start: Vector2 = from_view.position + from_view.get_output_port_position(wire[1]) * zoom
+		var end: Vector2 = to_view.position + to_view.get_input_port_position(wire[3]) * zoom
+		var lit: bool = from_view.selected or to_view.selected
+		var colour: Color = ThemeLayout.accent_color.lightened(0.25) if lit else Color(1, 1, 1, 0.22)
+		_dashed_arc(start, end, colour, (2.0 if lit else 1.2) * zoom)
+
+
+## An S-shaped arc out of the right of one card and into the left of another, dashed, with
+## an arrowhead at the card it leads to.
+func _dashed_arc(start: Vector2, end: Vector2, colour: Color, width: float) -> void:
+	var reach: float = maxf(80.0 * zoom, absf(start.y - end.y) * 0.25)
+	var c1: Vector2 = start + Vector2(reach, 0)
+	var c2: Vector2 = end - Vector2(reach, 0)
+	var points: PackedVector2Array = PackedVector2Array()
+	var steps: int = 48
+	for i: int in steps + 1:
+		var t: float = float(i) / steps
+		var u: float = 1.0 - t
+		points.append(u * u * u * start + 3.0 * u * u * t * c1 + 3.0 * u * t * t * c2 + t * t * t * end)
+	# dashes laid along the curve's length
+	var dash: float = 7.0 * zoom
+	var gap: float = 5.0 * zoom
+	var drawing: bool = true
+	var left: float = dash
+	for i: int in points.size() - 1:
+		var a: Vector2 = points[i]
+		var b: Vector2 = points[i + 1]
+		var length: float = a.distance_to(b)
+		var done: float = 0.0
+		while done < length:
+			var step: float = minf(left, length - done)
+			var p: Vector2 = a.lerp(b, done / length)
+			var q: Vector2 = a.lerp(b, (done + step) / length)
+			if drawing:
+				draw_line(p, q, colour, width, true)
+			done += step
+			left -= step
+			if left <= 0.0:
+				drawing = not drawing
+				left = dash if drawing else gap
+	# the arrow, pointing into the card it leads to
+	var tip: Vector2 = end
+	var back: Vector2 = (points[points.size() - 3] - tip).normalized()
+	var side: Vector2 = Vector2(-back.y, back.x)
+	var size: float = 7.0 * zoom
+	draw_colored_polygon(PackedVector2Array([tip, tip + back * size + side * size * 0.55, tip + back * size - side * size * 0.55]), colour)

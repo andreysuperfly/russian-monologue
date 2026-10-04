@@ -14,6 +14,9 @@ func _build_menu() -> void:
 	)
 	add_check_row("Show Pictures", Pictures.enabled(), _on_show_pictures)
 	add_check_row("Compact Cards", ConfigManager.get_config("compact_cards", false) == true, _on_compact_cards)
+	add_check_row("Back Wires as ↩ Links", ConfigManager.get_config("back_links_as_buttons", false) == true, func(enabled: bool) -> void:
+		ConfigManager.set_config("back_links_as_buttons", enabled)
+		EventBus.refresh_graph.emit())
 	add_separator()
 	add_row("Bigger", func() -> void: App.step_ui_scale(1), true, ["mnl_ui_bigger"])
 	add_row("Smaller", func() -> void: App.step_ui_scale(-1), true, ["mnl_ui_smaller"])
