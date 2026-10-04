@@ -281,6 +281,7 @@ T.update({
 "Not valid JSON.":"Это не JSON или он повреждён.",
 "[center][b]Monologue Preview[/b][/center]\n\nMonologue is in preview. If you encounter any bugs or issues, please report them on [url=https://github.com/atomic-junky/Monologue/]GitHub[/url] by creating an issue.\n\nThank you very much for using Monologue!":
 "[center][b]Russian Monologue[/b][/center]\n\nНашли ошибку — напишите о ней на [url=https://github.com/andreysuperfly/russian-monologue/issues]GitHub[/url].\n\nСпасибо, что пользуетесь!",
+"Storyline «%s»":"Диалог «%s»","Open this place on the graph":"Открыть это место на схеме","Show on the graph →":"Показать на схеме →","Click a place: the graph opens there and its card flashes red.":"Нажмите на место — откроется схема, и нужная карточка мигнёт красным.","A line — %s":"Реплика — %s","A line":"Реплика","Player's answer":"Ответ игрока","Player's choice":"Выбор игрока","A check":"Проверка условия","the story goes on one way if this is so, another if not":"если это так — история идёт по одной ветке, если нет — по другой",
 })
 with open(__file__.replace('make_ru.py','ru.csv'),'w',newline='',encoding='utf-8') as f:
     w=csv.writer(f); w.writerow(['keys','ru'])

@@ -32,6 +32,14 @@ func usage(_object: InspectableObject) -> Dictionary:
 	return {}
 
 
+## Each place in [param object] where this add-on's fields use the record [param target_id],
+## in words, for «Where used»: [{"said": the option's or line's text ("" for the object itself),
+## "what": what it does there, "reads": true when it needs or checks rather than changes}]
+## (russian-monologue). Empty: the generic «needs or checks» / «changes» from [method usage].
+func usage_places(_object: InspectableObject, _target_id: String) -> Array:
+	return []
+
+
 ## Called on uninstall. Types registered through [param registry] are removed automatically.
 ## Override only for extra teardown.
 func unregister(_registry: MonologueRegistry) -> void:

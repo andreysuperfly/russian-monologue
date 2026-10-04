@@ -1116,6 +1116,7 @@ var _arcs: Array = []
 
 func _draw() -> void:
 	_hook_back_wire_redraws()
+	_draw_flash()
 	_arcs.clear()
 	if _back_wires.is_empty():
 		return
@@ -1215,3 +1216,59 @@ func go_to(view: GraphNode) -> void:
 	get_tree().create_timer(0.3).timeout.connect(func() -> void: pressed_on_text = false)
 	set_selected(view)
 	scroll_offset = (view.position_offset + view.size / 2.0) * zoom - size / 2.0
+	flash(view)
+
+
+## The card being flashed and how bright its aura is now, 1 → 0.
+var _flash_view: GraphNode
+var _flash_amount: float = 0.0
+var _flash_tween: Tween
+
+
+## A red aura around [param view] for about a second, so after a jump the eye finds the card
+## among many (russian-monologue).
+func flash(view: GraphNode) -> void:
+	if not is_instance_valid(view):
+		return
+	_flash_view = view
+	if _flash_tween:
+		_flash_tween.kill()
+	_flash_tween = create_tween()
+	_flash_tween.tween_method(_set_flash, 1.0, 0.0, 1.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+
+
+func _set_flash(amount: float) -> void:
+	_flash_amount = amount
+	queue_redraw()
+
+
+func _draw_flash() -> void:
+	if _flash_amount <= 0.0 or not is_instance_valid(_flash_view) or not _flash_view.visible:
+		return
+	# two quick pulses that fade out
+	var pulse: float = 0.55 + 0.45 * cos(_flash_amount * TAU * 2.0)
+	var alpha: float = clampf(_flash_amount * 1.6, 0.0, 1.0) * pulse
+	var glow: StyleBoxFlat = StyleBoxFlat.new()
+	glow.draw_center = false
+	glow.set_corner_radius_all(int(10 * zoom))
+	glow.set_border_width_all(maxi(2, int(3 * zoom)))
+	glow.border_color = Color(1.0, 0.25, 0.2, alpha)
+	glow.shadow_color = Color(1.0, 0.15, 0.1, 0.8 * alpha)
+	glow.shadow_size = int(28 * zoom)
+	var grow: float = 4.0 * zoom
+	draw_style_box(glow, Rect2(_flash_view.position, _flash_view.size * zoom).grow(grow))
+
+
+## Brings [param node]'s card into view and flashes it, once its storyline is on the graph:
+## for jumps from search, «where used» and problems, where the storyline may still be loading.
+static func reveal(node: InspectableNode) -> void:
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	for _i: int in 30:
+		await tree.process_frame
+		if node == null or not is_instance_valid(node.graph_view) or not node.graph_view.is_inside_tree():
+			continue
+		var graph: MonologueGraphEdit = node.graph_view.get_parent() as MonologueGraphEdit
+		if graph == null or graph.size.x <= 0.0 or node.graph_view.size.x <= 0.0:
+			continue
+		graph.go_to(node.graph_view)
+		return

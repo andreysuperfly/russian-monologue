@@ -19,7 +19,6 @@ var _usage_search: LineEdit
 var _usage_target: OptionButton
 var _usages_container: VBoxContainer
 var _all_usage_targets: Array[Dictionary] = []
-var _selected_usage_card: PanelContainer = null
 var _path_target: OptionButton
 var _paths: Tree
 
@@ -119,7 +118,7 @@ func _init() -> void:
 	usages_scroll.add_child(_usages_container)
 
 	var usage_hint: Label = Label.new()
-	usage_hint.text = tr("Double-click a place to open it on the graph.")
+	usage_hint.text = tr("Click a place: the graph opens there and its card flashes red.")
 	usage_hint.modulate = Color(1, 1, 1, 0.5)
 	usages_page.add_child(usage_hint)
 
@@ -406,7 +405,6 @@ func _filter_targets(query: String) -> void:
 func _fill_usages() -> void:
 	for child: Node in _usages_container.get_children():
 		child.queue_free()
-	_selected_usage_card = null
 
 	var project: MonologueProject = ProjectManager.current_project
 	if project == null or _usage_target.selected < 0 or _usage_target.item_count == 0:
@@ -414,21 +412,43 @@ func _fill_usages() -> void:
 		return
 
 	var target: String = str(_usage_target.get_item_metadata(_usage_target.selected))
-	var sites: Array[ReferenceSite] = project.get_object_registry().get_referrers(target)
-	sites.append_array(_addon_sites(project, target))
-	if sites.is_empty():
+	var entries: Array[Dictionary] = []
+	for site: ReferenceSite in project.get_object_registry().get_referrers(target):
+		var found: Array = _find_node(project, site.owner_id)
+		if found.is_empty():
+			entries.append({"group": tr("Collections"), "kind": "", "said": _where(project, site.owner_id, site.document_name), "what": tr(site.property_name), "jump": site.owner_id})
+			continue
+		var node: InspectableNode = found[1]
+		var what: String = tr(site.property_name)
+		if node.get_type() == "condition":
+			what = tr("the story goes on one way if this is so, another if not")
+		entries.append({"group": (found[0] as StorylineDocument).name, "kind": _kind(project, node, site.owner_id),
+			"said": _said(project, node, site.owner_id), "what": what, "jump": node.get_id()})
+	entries.append_array(_addon_entries(project, target))
+	# one card per place: what an answer needs and what it gives go on the same card, and the
+	# same thing told twice (an option seen inside its choice and on its own) once
+	var seen: Dictionary = {}
+	var unique: Array[Dictionary] = []
+	for entry: Dictionary in entries:
+		var key: String = "%s|%s|%s" % [entry["jump"], entry["kind"], entry["said"]]
+		if not seen.has(key):
+			entry["whats"] = [entry["what"]]
+			seen[key] = entry
+			unique.append(entry)
+		elif not entry["what"] in seen[key]["whats"]:
+			seen[key]["whats"].append(entry["what"])
+	if unique.is_empty():
 		_show_empty_usages(tr("Not used anywhere."))
 		return
 
 	var groups: Dictionary = {}
 	var order: Array = []
-	for site: ReferenceSite in sites:
-		var found: Array = _find_node(project, site.owner_id)
-		var group: String = (found[0] as StorylineDocument).name if not found.is_empty() else tr("Collections")
+	for entry: Dictionary in unique:
+		var group: String = entry["group"]
 		if not groups.has(group):
 			groups[group] = []
 			order.append(group)
-		groups[group].append([site, found])
+		groups[group].append(entry)
 	order.sort()
 
 	for group: String in order:
@@ -436,7 +456,7 @@ func _fill_usages() -> void:
 		group_header.add_theme_constant_override("separation", 8)
 
 		var title_label: Label = Label.new()
-		title_label.text = group
+		title_label.text = tr("Storyline «%s»") % group if group != tr("Collections") else group
 		title_label.add_theme_font_size_override("font_size", 13)
 		title_label.add_theme_color_override("font_color", Color(0.75, 0.75, 0.78))
 		group_header.add_child(title_label)
@@ -448,20 +468,19 @@ func _fill_usages() -> void:
 
 		_usages_container.add_child(group_header)
 
-		for entry: Array in groups[group]:
-			var site: ReferenceSite = entry[0]
-			var found: Array = entry[1]
-			var storyline_name: String = (found[0] as StorylineDocument).name if not found.is_empty() else tr("Collections")
-			var said_text: String = _said(project, found[1] as InspectableNode, site.owner_id) if not found.is_empty() else _where(project, site.owner_id, site.document_name)
-			var field_name: String = tr(site.property_name)
-			var card: PanelContainer = _make_usage_card(storyline_name, said_text, field_name, site.owner_id)
-			_usages_container.add_child(card)
+		for entry: Dictionary in groups[group]:
+			_usages_container.add_child(_make_usage_card(entry))
 
 
-func _make_usage_card(storyline_name: String, said_text: String, field_name: String, object_id: String) -> PanelContainer:
+## One place, so that someone who has never seen the graph knows what it is: what kind of step
+## (a line and who says it, the player's answer, a check), its words, what happens to the thing
+## there, and a button that opens it on the graph, where its card flashes.
+func _make_usage_card(entry: Dictionary) -> PanelContainer:
+	var object_id: String = entry["jump"]
 	var card: PanelContainer = PanelContainer.new()
 	card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	card.mouse_filter = Control.MOUSE_FILTER_STOP
+	card.tooltip_text = tr("Open this place on the graph")
 
 	var style_normal: StyleBoxFlat = StyleBoxFlat.new()
 	style_normal.bg_color = Color(0.12, 0.12, 0.15)
@@ -473,67 +492,66 @@ func _make_usage_card(storyline_name: String, said_text: String, field_name: Str
 	style_hover.set_corner_radius_all(8)
 	style_hover.set_content_margin_all(10)
 
-	var style_selected: StyleBoxFlat = StyleBoxFlat.new()
-	style_selected.bg_color = Color(0.17, 0.20, 0.26)
-	style_selected.border_color = Color(0.35, 0.55, 0.90)
-	style_selected.set_border_width_all(1)
-	style_selected.set_corner_radius_all(8)
-	style_selected.set_content_margin_all(10)
-
 	card.set_meta("style_normal", style_normal)
 	card.set_meta("style_hover", style_hover)
-	card.set_meta("style_selected", style_selected)
+	card.set_meta("style_selected", style_hover)
 	card.add_theme_stylebox_override("panel", style_normal)
 
-	card.mouse_entered.connect(func() -> void:
-		if _selected_usage_card != card:
-			card.add_theme_stylebox_override("panel", style_hover)
-	)
-	card.mouse_exited.connect(func() -> void:
-		if _selected_usage_card != card:
-			card.add_theme_stylebox_override("panel", style_normal)
-	)
-
+	card.mouse_entered.connect(func() -> void: card.add_theme_stylebox_override("panel", style_hover))
+	card.mouse_exited.connect(func() -> void: card.add_theme_stylebox_override("panel", style_normal))
+	# one click is enough: a list of places is for going to them
 	card.gui_input.connect(func(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			if event.double_click:
-				_jump_to_object(object_id)
-			else:
-				_select_usage_card(card)
+			_jump_to_object(object_id)
 	)
 
 	var hbox: HBoxContainer = HBoxContainer.new()
 	hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_theme_constant_override("separation", 12)
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(hbox)
 
 	var vbox: VBoxContainer = VBoxContainer.new()
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_theme_constant_override("separation", 4)
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(vbox)
 
+	var kind: String = entry.get("kind", "")
+	if not kind.is_empty():
+		var kind_label: Label = Label.new()
+		kind_label.text = kind
+		kind_label.add_theme_font_size_override("font_size", 12)
+		kind_label.add_theme_color_override("font_color", Color(0.62, 0.66, 0.74))
+		kind_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vbox.add_child(kind_label)
+
 	var text_label: Label = Label.new()
-	text_label.text = said_text
+	var said: String = entry.get("said", "")
+	text_label.text = "«%s»" % said if not said.is_empty() and not kind.is_empty() else said
 	text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text_label.add_theme_color_override("font_color", Color.WHITE)
 	text_label.add_theme_font_size_override("font_size", 15)
+	text_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(text_label)
 
-	var pill: Label = _make_pill(Color(0.20, 0.23, 0.29))
-	pill.text = field_name
-	pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	hbox.add_child(pill)
+	var what: Label = Label.new()
+	what.text = "\n".join((entry.get("whats", [entry.get("what", "")]) as Array).map(func(w: Variant) -> String: return "→ %s" % w))
+	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	what.add_theme_font_size_override("font_size", 14)
+	what.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45))
+	what.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(what)
+
+	var open_button: Button = Button.new()
+	open_button.text = tr("Show on the graph →")
+	open_button.focus_mode = Control.FOCUS_NONE
+	open_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	open_button.pressed.connect(_jump_to_object.bind(object_id))
+	hbox.add_child(open_button)
 
 	return card
-
-
-func _select_usage_card(card: PanelContainer) -> void:
-	if _selected_usage_card != null and is_instance_valid(_selected_usage_card):
-		_selected_usage_card.add_theme_stylebox_override("panel", _selected_usage_card.get_meta("style_normal"))
-	_selected_usage_card = card
-	if _selected_usage_card != null:
-		_selected_usage_card.add_theme_stylebox_override("panel", _selected_usage_card.get_meta("style_selected"))
 
 
 func _show_empty_usages(message: String) -> void:
@@ -559,8 +577,58 @@ func _said(project: MonologueProject, node: InspectableNode, object_id: String) 
 	if node.get_type() == "choice":
 		for option: Variant in node.get_property_value("choices"):
 			if option is Dictionary and str(option.get("id", "")) == object_id:
-				return "» " + NodePreview.trim(Util.to_label(option.get("text", {}), language), 400)
-	return NodePreview.node_label(project, node.get_id())
+				return NodePreview.trim(Util.to_label(option.get("text", {}), language), 400)
+	return _summary(project, node)
+
+
+## What kind of step a place is, in words: «Line — Баба Нюра», «Player's answer», «Check».
+func _kind(project: MonologueProject, node: InspectableNode, object_id: String) -> String:
+	match node.get_type():
+		"sentence":
+			var speaker: String = ""
+			if node.get_property("speaker") != null:
+				speaker = ReferenceResolver.resolve_label(project, "characters", str(node.get_property_value("speaker")))
+			return tr("A line — %s") % speaker if not speaker.is_empty() else tr("A line")
+		"choice":
+			return tr("Player's answer") if object_id != node.get_id() else tr("Player's choice")
+		"condition":
+			return tr("A check")
+	return tr(Util.to_readable_name(node.get_type()))
+
+
+## A node without words of its own (a check, a set variable, a game step) as its card reads, not
+## its id: the title it gives itself, else the text of its preview.
+func _summary(project: MonologueProject, node: InspectableNode) -> String:
+	if node.has_method("card_title"):
+		var title: String = str(node.call("card_title"))
+		if not title.is_empty():
+			return title
+	var label: String = str(node.get_property_value("label")) if node.get_property("label") != null else ""
+	if not label.is_empty() and label != node.get_id() and not label.begins_with(node.get_type() + "-"):
+		return label
+	if node.has_method("_build_preview"):
+		var preview: Variant = node.call("_build_preview", project.active_language_code)
+		if preview is Control:
+			var text: String = _text_in(preview as Control).strip_edges()
+			(preview as Control).free()
+			if not text.is_empty():
+				return NodePreview.trim(text, 400)
+	return ""
+
+
+func _text_in(control: Node) -> String:
+	var parts: PackedStringArray = PackedStringArray()
+	if control is RichTextLabel:
+		parts.append((control as RichTextLabel).get_parsed_text())
+	elif control is Label:
+		parts.append((control as Label).text)
+	elif control is Button:
+		parts.append((control as Button).text)
+	for child: Node in control.get_children():
+		var inner: String = _text_in(child)
+		if not inner.is_empty():
+			parts.append(inner)
+	return " ".join(parts)
 
 
 # ---------- path to an ending ----------
@@ -642,35 +710,47 @@ func _where(project: MonologueProject, object_id: String, document_name: String)
 	return document_name if not document_name.is_empty() else object_id
 
 
-## [storyline, node] holding [param object_id] — the node itself, or the node an embedded option
-## belongs to. Empty when it is not on any graph.
 ## Places an add-on's own fields name the record (a skill a choice needs, raises or spends),
-## which plain references do not see (russian-monologue).
-func _addon_sites(project: MonologueProject, target: String) -> Array[ReferenceSite]:
-	var found: Array[ReferenceSite] = []
+## which plain references do not see, told in words where the add-on can (russian-monologue).
+func _addon_entries(project: MonologueProject, target: String) -> Array[Dictionary]:
+	var found: Array[Dictionary] = []
 	var plugins: Array[MonologuePlugin] = MonologueRegistry.get_instance().get_installed_plugins()
 	if plugins.is_empty():
 		return found
-	var look: Callable = func(object: InspectableObject) -> void:
+	var look: Callable = func(storyline: StorylineDocument, node: InspectableNode, object: InspectableObject) -> void:
+		var object_id: String = object.get_id() if object.has_method("get_id") else node.get_id()
 		for plugin: MonologuePlugin in plugins:
+			var places: Array = plugin.usage_places(object, target)
+			for place: Variant in places:
+				if not place is Dictionary:
+					continue
+				var option: String = str(place.get("option", ""))
+				var said: String = str(place.get("said", ""))
+				var at: String = option if not option.is_empty() else object_id
+				found.append({"group": storyline.name, "kind": _kind(project, node, at),
+					"said": NodePreview.trim(said, 400) if not said.is_empty() else _said(project, node, at),
+					"what": str(place.get("what", "")), "jump": node.get_id()})
+			if not places.is_empty():
+				continue
+			# an add-on that does not say it in words: what it reads and writes
 			var report: Dictionary = plugin.usage(object)
 			for kind: String in ["reads", "writes"]:
 				if str(target) in (report.get(kind, []) as Array).map(func(x: Variant) -> String: return str(x)):
-					var site: ReferenceSite = ReferenceSite.new()
-					site.owner_id = object.get_id() if object.has_method("get_id") else ""
-					site.target_id = target
-					site.property_name = "needs or checks" if kind == "reads" else "changes"
-					found.append(site)
+					found.append({"group": storyline.name, "kind": _kind(project, node, object_id),
+						"said": _said(project, node, object_id),
+						"what": tr("needs or checks" if kind == "reads" else "changes"), "jump": node.get_id()})
 	for storyline: StorylineDocument in project.storylines:
 		for node: InspectableNode in storyline.nodes:
-			look.call(node)
+			look.call(storyline, node, node)
 			for children: Variant in node.get_all_property_children():
 				for child: Variant in children:
 					if child is InspectableObject:
-						look.call(child)
+						look.call(storyline, node, child)
 	return found
 
 
+## [storyline, node] holding [param object_id] — the node itself, or the node an embedded option
+## belongs to. Empty when it is not on any graph.
 func _find_node(project: MonologueProject, object_id: String) -> Array:
 	if object_id.is_empty():
 		return []
@@ -701,14 +781,7 @@ func _jump_to_object(object_id: String) -> void:
 
 ## Brings the node into view on the graph, not just selects it somewhere off screen.
 func _center_on(node: InspectableNode) -> void:
-	await get_tree().process_frame
-	if node == null or node.graph_view == null or not is_instance_valid(node.graph_view):
-		return
-	var graph: GraphEdit = node.graph_view.get_parent() as GraphEdit
-	if graph is MonologueGraphEdit:
-		(graph as MonologueGraphEdit).jumped.emit()
-	if graph:
-		graph.scroll_offset = node.graph_view.position_offset * graph.zoom - graph.size / 2.0 + node.graph_view.size * graph.zoom / 2.0
+	MonologueGraphEdit.reveal(node)
 
 
 func _on_row_activated(tree: Tree) -> void:

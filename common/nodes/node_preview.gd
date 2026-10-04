@@ -238,6 +238,9 @@ static func literal(value: Variant) -> String:
 		return '"%s"' % trim(value)
 	if value is bool:
 		return TranslationServer.translate("yes") if value else TranslationServer.translate("no")
+	# 15, not 15.0 (russian-monologue)
+	if value is float and value == floorf(value) and absf(value) < 1e15:
+		return str(int(value))
 	return str(value)
 
 

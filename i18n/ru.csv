@@ -596,3 +596,13 @@ port list,список
 port collection,список
 port audio,звук
 port file,файл
+Storyline «%s»,Диалог «%s»
+Open this place on the graph,Открыть это место на схеме
+Show on the graph →,Показать на схеме →
+Click a place: the graph opens there and its card flashes red.,"Нажмите на место — откроется схема, и нужная карточка мигнёт красным."
+A line — %s,Реплика — %s
+A line,Реплика
+Player's answer,Ответ игрока
+Player's choice,Выбор игрока
+A check,Проверка условия
+"the story goes on one way if this is so, another if not","если это так — история идёт по одной ветке, если нет — по другой"

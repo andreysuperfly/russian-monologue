@@ -178,11 +178,4 @@ func _on_card_input(event: InputEvent, storyline: StorylineDocument, node: Inspe
 
 
 func _center_on(node: InspectableNode) -> void:
-	await get_tree().process_frame
-	if node == null or not is_instance_valid(node.graph_view):
-		return
-	var graph: MonologueGraphEdit = node.graph_view.get_parent() as MonologueGraphEdit
-	if graph == null:
-		return
-	graph.jumped.emit()
-	graph.scroll_offset = node.graph_view.position_offset * graph.zoom - graph.size / 2.0 + node.graph_view.size * graph.zoom / 2.0
+	MonologueGraphEdit.reveal(node)
