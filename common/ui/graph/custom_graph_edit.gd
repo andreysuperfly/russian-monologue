@@ -20,7 +20,9 @@ var separate_wire_lanes: bool = true:
 	set(value):
 		if separate_wire_lanes != value:
 			separate_wire_lanes = value
+			_lanes_dirty = true
 			_update_lane_offsets()
+			connection_lines_curvature = connection_lines_curvature
 			queue_redraw()
 
 
@@ -172,104 +174,134 @@ func _get_connection_line(from_position: Vector2, to_position: Vector2) -> Packe
 
 
 var _lanes_dirty: bool = true
+var _lane_turns: Dictionary = {}  # key String -> float turn_x in canvas px
+var _lane_list: Array[Dictionary] = []  # list of { "p1": Vector2, "p2": Vector2, "turn_x": float }
 
 
 func _get_wire_mid_x(from_position: Vector2, to_position: Vector2) -> float:
 	var base_mid: float = (from_position.x + to_position.x) * 0.5
 	if not separate_wire_lanes:
 		return base_mid
-	if _lanes_dirty or _lane_offsets.is_empty():
+	if _lanes_dirty or _lane_turns.is_empty():
 		_update_lane_offsets()
-	var c_from: Vector2 = (from_position + scroll_offset) / zoom
-	var c_to: Vector2 = (to_position + scroll_offset) / zoom
+	var c_from: Vector2 = from_position / zoom
+	var c_to: Vector2 = to_position / zoom
 	var key: String = "%d,%d>%d,%d" % [roundi(c_from.x), roundi(c_from.y), roundi(c_to.x), roundi(c_to.y)]
-	var offset: Variant = _lane_offsets.get(key)
-	if offset != null:
-		return base_mid + float(offset) * zoom
-	# fallback: match by close canvas coordinates (within 3px)
-	for k: String in _lane_offsets:
-		var parts: PackedStringArray = k.split(">")
-		if parts.size() != 2:
-			continue
-		var p1_s: PackedStringArray = parts[0].split(",")
-		var p2_s: PackedStringArray = parts[1].split(",")
-		if p1_s.size() == 2 and p2_s.size() == 2:
-			if absf(float(p1_s[0]) - c_from.x) <= 3.0 and absf(float(p1_s[1]) - c_from.y) <= 3.0 \
-					and absf(float(p2_s[0]) - c_to.x) <= 3.0 and absf(float(p2_s[1]) - c_to.y) <= 3.0:
-				return base_mid + float(_lane_offsets[k]) * zoom
+	var turn: Variant = _lane_turns.get(key)
+	if turn != null:
+		return float(turn) * zoom
+	# fallback: match by close canvas coordinates (within 4px)
+	for rec: Dictionary in _lane_list:
+		if rec.p1.distance_squared_to(c_from) <= 16.0 and rec.p2.distance_squared_to(c_to) <= 16.0:
+			return float(rec.turn_x) * zoom
 	return base_mid
 
 
-## Recalculates parallel lane offsets so overlapping vertical wires in the same corridor
+## Recalculates parallel lane turn coordinates so overlapping vertical wires in the same corridor
 ## do not merge into a single line (russian-monologue).
 func _update_lane_offsets() -> void:
-	_lane_offsets.clear()
+	_lane_turns.clear()
+	_lane_list.clear()
 	_lanes_dirty = false
 	if not separate_wire_lanes:
 		return
 	var conns: Array[Dictionary] = get_connection_list()
 	if conns.is_empty():
 		return
-	# Group wires into corridors between columns (in canvas space)
-	var corridors: Dictionary = {}
+
+	# Collect all forward connections with vertical travel (in canvas space)
+	var wires: Array[Dictionary] = []
 	for c: Dictionary in conns:
-		var fn: GraphNode = get_node_or_null(str(c.from_node)) as GraphNode
-		var tn: GraphNode = get_node_or_null(str(c.to_node)) as GraphNode
+		var fn: GraphNode = get_node_or_null(NodePath(c.from_node)) as GraphNode
+		var tn: GraphNode = get_node_or_null(NodePath(c.to_node)) as GraphNode
 		if fn == null or tn == null:
+			continue
+		if c.from_port < 0 or c.from_port >= fn.get_output_port_count():
+			continue
+		if c.to_port < 0 or c.to_port >= tn.get_input_port_count():
 			continue
 		var p1: Vector2 = fn.position_offset + fn.get_output_port_position(c.from_port)
 		var p2: Vector2 = tn.position_offset + tn.get_input_port_position(c.to_port)
 		# Only forward wires with vertical travel
 		if p2.x <= p1.x + 2.0 or absf(p2.y - p1.y) <= 4.0:
 			continue
-		var key: String = "%d_%d_%d" % [roundi(p1.x / 40.0), roundi(p2.x / 40.0), 1 if p2.y > p1.y else -1]
-		(corridors.get_or_add(key, []) as Array).append({
+		wires.append({
 			"p1": p1,
 			"p2": p2,
+			"nominal_x": (p1.x + p2.x) * 0.5,
 			"y_min": minf(p1.y, p2.y),
 			"y_max": maxf(p1.y, p2.y),
-			"dist": absf(p2.y - p1.y),
+			"down": p2.y >= p1.y,
 		})
 
-	for corr_key: String in corridors:
-		var wires: Array = corridors[corr_key]
-		# Find connected clusters of wires whose vertical ranges overlap
-		var clusters: Array = []
-		for w: Dictionary in wires:
-			var merged_into: Array = []
-			for cl: Array in clusters:
-				var overlaps: bool = false
-				for other: Dictionary in cl:
-					if w.y_max > other.y_min + 4.0 and other.y_max > w.y_min + 4.0:
-						overlaps = true
-						break
-				if overlaps:
-					merged_into.append(cl)
-			if merged_into.is_empty():
-				clusters.append([w])
-			else:
-				var target_cl: Array = merged_into[0]
-				target_cl.append(w)
-				for k: int in range(1, merged_into.size()):
-					target_cl.append_array(merged_into[k])
-					clusters.erase(merged_into[k])
-
+	# Group wires into clusters of mutually conflicting vertical segments
+	var clusters: Array = []
+	for w: Dictionary in wires:
+		var merged_into: Array = []
 		for cl: Array in clusters:
-			if cl.size() <= 1:
-				continue
-			# Closest target peels off first -> needs largest X (outer lane, closest to target)
-			# Furthest target peels off last -> needs smallest X (inner lane, closest to source)
-			cl.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.dist < b.dist)
-			var K: int = cl.size()
-			var p1_s: Vector2 = cl[0].p1
-			var p2_s: Vector2 = cl[0].p2
-			var avail: float = maxf(16.0, (p2_s.x - p1_s.x) - 40.0)
-			var step_x: float = clampf(avail / float(K), 12.0, 24.0)
-			for i: int in K:
-				var item: Dictionary = cl[i]
-				var offset: float = ((float(K - 1) * 0.5) - float(i)) * step_x
-				var conn_key: String = "%d,%d>%d,%d" % [roundi(item.p1.x), roundi(item.p1.y), roundi(item.p2.x), roundi(item.p2.y)]
-				_lane_offsets[conn_key] = offset
+			var overlaps: bool = false
+			for other: Dictionary in cl:
+				if absf(w.nominal_x - other.nominal_x) <= 40.0 \
+						and absf(w.p1.x - other.p1.x) <= 70.0 \
+						and absf(w.p2.x - other.p2.x) <= 90.0 \
+						and w.y_max > other.y_min + 4.0 and other.y_max > w.y_min + 4.0:
+					overlaps = true
+					break
+			if overlaps:
+				merged_into.append(cl)
+		if merged_into.is_empty():
+			clusters.append([w])
+		else:
+			var target_cl: Array = merged_into[0]
+			target_cl.append(w)
+			for k: int in range(1, merged_into.size()):
+				target_cl.append_array(merged_into[k])
+				clusters.erase(merged_into[k])
+
+	for cl: Array in clusters:
+		if cl.size() <= 1:
+			continue
+		# Order wires from innermost (smallest X, travels furthest) to outermost (largest X, peels off earliest):
+		# For wires going down: larger p2.y travels further down -> inner lane (index 0). Smaller p2.y peels off first -> outer lane.
+		# For wires going up: smaller p2.y travels further up -> inner lane (index 0). Larger p2.y peels off first -> outer lane.
+		cl.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			if a.down != b.down:
+				return a.down
+			if a.down:
+				return a.p2.y > b.p2.y
+			else:
+				return a.p2.y < b.p2.y
+		)
+
+		var left_bound: float = -INF
+		var right_bound: float = INF
+		for w: Dictionary in cl:
+			left_bound = maxf(left_bound, w.p1.x + 20.0)
+			right_bound = minf(right_bound, w.p2.x - 20.0)
+
+		if right_bound <= left_bound + 20.0:
+			left_bound = cl[0].p1.x + 10.0
+			right_bound = cl[0].p2.x - 10.0
+
+		var mid_x: float = (left_bound + right_bound) * 0.5
+		var avail: float = maxf(24.0, right_bound - left_bound)
+		var K: int = cl.size()
+		var step_x: float = clampf(avail / float(K + 1), 14.0, 24.0)
+		if (K - 1) * step_x > avail - 16.0:
+			step_x = maxf(10.0, (avail - 16.0) / float(K - 1))
+
+		for i: int in K:
+			var item: Dictionary = cl[i]
+			var lane_x: float = mid_x + (float(i) - float(K - 1) * 0.5) * step_x
+			lane_x = clampf(lane_x, left_bound + 8.0, right_bound - 8.0)
+			var conn_key: String = "%d,%d>%d,%d" % [roundi(item.p1.x), roundi(item.p1.y), roundi(item.p2.x), roundi(item.p2.y)]
+			_lane_turns[conn_key] = lane_x
+			_lane_list.append({
+				"p1": item.p1,
+				"p2": item.p2,
+				"turn_x": lane_x,
+			})
+
 
 
 static func _append_wire_point(arr: PackedVector2Array, pt: Vector2) -> void:

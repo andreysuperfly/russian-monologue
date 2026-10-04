@@ -292,6 +292,18 @@ func _lay_header_in_a_row() -> void:
 		header_right.add_child(roomy_btn)
 		header_right.move_child(roomy_btn, 1)
 
+		var lanes_btn: Button = Button.new()
+		lanes_btn.toggle_mode = true
+		lanes_btn.button_pressed = graph.separate_wire_lanes
+		lanes_btn.text = tr("Separate Wires")
+		lanes_btn.tooltip_text = tr("Route parallel wires in separate lanes so they do not merge (Undo: toggle again)")
+		lanes_btn.focus_mode = Control.FOCUS_NONE
+		lanes_btn.toggled.connect(func(on: bool) -> void:
+			graph.separate_wire_lanes = on
+		)
+		header_right.add_child(lanes_btn)
+		header_right.move_child(lanes_btn, 2)
+
 
 static func _spring() -> Control:
 	var spring: Control = Control.new()
