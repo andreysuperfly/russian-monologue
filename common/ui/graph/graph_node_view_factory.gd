@@ -7,12 +7,16 @@ const SLOT_OUT_TEXTURE: Texture2D = preload("res://ui/assets/icons/slot_out.svg"
 const PREVIEW_NAME: StringName = &"Preview"
 ## As tall as a preview is ever drawn, whatever it decided to build.
 const PREVIEW_MAX_HEIGHT: float = 96.0
-## How much of a list item's name a node shows. A node is a diagram of the story, not the
-## story itself: past this the name is cut and the whole of it read in the inspector.
-const MAX_LIST_LABEL: int = 40
+## How much of a list item's name a node shows. The whole of it, wrapped onto more lines
+## (russian-monologue); the cap only guards against a pasted page.
+const MAX_LIST_LABEL: int = 400
 ## Titles longer than this wrap onto a second line, at about this width.
 const TITLE_WRAP_AT: int = 24
 const TITLE_WRAP_WIDTH: float = 210.0
+## Any other row longer than this wraps too, at this width, instead of pushing the card wider
+## and wider or being cut off (russian-monologue).
+const ROW_WRAP_AT: int = 34
+const ROW_WRAP_WIDTH: float = 300.0
 ## How far a list item's type is faded behind the properties framing it.
 const LIST_LABEL_ALPHA: float = 0.5
 
@@ -87,6 +91,9 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 		if idx == 0 and key_label.text.length() > TITLE_WRAP_AT:
 			key_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			key_label.custom_minimum_size.x = TITLE_WRAP_WIDTH
+		elif idx > 0 and key_label.text.length() > ROW_WRAP_AT:
+			key_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			key_label.custom_minimum_size.x = ROW_WRAP_WIDTH
 
 		var value_label: Label = Label.new()
 		value_label.mouse_filter = Control.MOUSE_FILTER_PASS

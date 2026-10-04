@@ -211,7 +211,8 @@ static func _check_phrase(project: MonologueProject, check: Dictionary) -> Strin
 			if not said.is_empty() and yes_no is bool and str(check.get("operator", "==")) in ["==", "="]:
 				phrase = said if yes_no else "%s %s" % [TranslationServer.translate("NOT"), said]
 			else:
-				phrase = "%s %s %s" % [trim(said if not said.is_empty() else variable), symbol(str(check.get("operator", "=="))), literal(check.get("value"))]
+				# the author's own words are read whole; a bare name may still be cut
+				phrase = "%s %s %s" % [said if not said.is_empty() else trim(variable), symbol(str(check.get("operator", "=="))), literal(check.get("value"))]
 	if check.get("not", false) == true:
 		phrase = "%s %s" % [TranslationServer.translate("NOT"), phrase]
 	return phrase
