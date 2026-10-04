@@ -20,10 +20,7 @@ var separate_wire_lanes: bool = true:
 	set(value):
 		if separate_wire_lanes != value:
 			separate_wire_lanes = value
-			_lanes_dirty = true
-			_update_lane_offsets()
-			connection_lines_curvature = connection_lines_curvature
-			queue_redraw()
+			mark_lanes_dirty()
 
 ## When enabled, wires avoid cutting through intermediate cards between source and target,
 ## detouring smoothly around them (russian-monologue).
@@ -31,10 +28,7 @@ var avoid_card_obstacles: bool = true:
 	set(value):
 		if avoid_card_obstacles != value:
 			avoid_card_obstacles = value
-			_lanes_dirty = true
-			_update_lane_offsets()
-			connection_lines_curvature = connection_lines_curvature
-			queue_redraw()
+			mark_lanes_dirty()
 
 
 func _ready() -> void:
@@ -52,6 +46,52 @@ func _ready() -> void:
 
 	connection_drag_started.connect(_on_connection_drag_started)
 	connection_drag_ended.connect(_on_connection_drag_ended)
+
+	child_entered_tree.connect(_on_child_entered_tree)
+	child_exiting_tree.connect(_on_child_exiting_tree)
+	for child: Node in get_children():
+		_track_node_child(child)
+
+	connection_request.connect(func(_f, _fp, _t, _tp): mark_lanes_dirty())
+	disconnection_request.connect(func(_f, _fp, _t, _tp): mark_lanes_dirty())
+	connection_to_empty.connect(func(_f, _fp, _p): mark_lanes_dirty())
+	connection_from_empty.connect(func(_t, _tp, _p): mark_lanes_dirty())
+	begin_node_move.connect(func(): mark_lanes_dirty())
+	end_node_move.connect(func(): mark_lanes_dirty())
+
+
+func mark_lanes_dirty() -> void:
+	if not _lanes_dirty:
+		_lanes_dirty = true
+		queue_redraw()
+
+
+func _track_node_child(child: Node) -> void:
+	if child is GraphNode:
+		if not child.position_offset_changed.is_connected(mark_lanes_dirty):
+			child.position_offset_changed.connect(mark_lanes_dirty)
+		if not child.item_rect_changed.is_connected(mark_lanes_dirty):
+			child.item_rect_changed.connect(mark_lanes_dirty)
+
+
+func _untrack_node_child(child: Node) -> void:
+	if child is GraphNode:
+		if child.position_offset_changed.is_connected(mark_lanes_dirty):
+			child.position_offset_changed.disconnect(mark_lanes_dirty)
+		if child.item_rect_changed.is_connected(mark_lanes_dirty):
+			child.item_rect_changed.disconnect(mark_lanes_dirty)
+
+
+func _on_child_entered_tree(child: Node) -> void:
+	_track_node_child(child)
+	mark_lanes_dirty()
+
+
+func _on_child_exiting_tree(child: Node) -> void:
+	_untrack_node_child(child)
+	mark_lanes_dirty()
+
+
 
 
 ## Where the eye is, in the graph's own coordinates. A new node belongs here, not in the
@@ -208,7 +248,7 @@ func _get_wire_mid_x(from_position: Vector2, to_position: Vector2) -> float:
 	var base_mid: float = (from_position.x + to_position.x) * 0.5
 	if not separate_wire_lanes:
 		return base_mid
-	if _lanes_dirty or _lane_turns.is_empty():
+	if _lanes_dirty:
 		_update_lane_offsets()
 	var c_from: Vector2 = from_position / zoom
 	var c_to: Vector2 = to_position / zoom
@@ -226,7 +266,7 @@ func _get_wire_mid_x(from_position: Vector2, to_position: Vector2) -> float:
 func _get_detour_points(from_position: Vector2, to_position: Vector2) -> Array[Vector2]:
 	if not avoid_card_obstacles:
 		return []
-	if _lanes_dirty or (_detour_routes.is_empty() and _detour_list.is_empty()):
+	if _lanes_dirty:
 		_update_lane_offsets()
 	if _detour_routes.is_empty() and _detour_list.is_empty():
 		return []
@@ -491,7 +531,6 @@ static func _append_wire_point(arr: PackedVector2Array, pt: Vector2) -> void:
 ## Wires thin out with the zoom like everything else; Godot keeps their width in screen pixels,
 ## so zoomed out they used to look fat (russian-monologue).
 func _process(_delta: float) -> void:
-	_lanes_dirty = true
 	if is_equal_approx(zoom, _wire_zoom):
 		return
 	_wire_zoom = zoom

@@ -220,6 +220,7 @@ func _sync_position_from_property(node: InspectableNode) -> void:
 	_is_applying_position = true
 	node.graph_view.position_offset = desired_position
 	_is_applying_position = false
+	mark_lanes_dirty()
 
 
 func _on_graph_node_position_changed(graph_node: GraphNode) -> void:
@@ -227,6 +228,7 @@ func _on_graph_node_position_changed(graph_node: GraphNode) -> void:
 		return
 
 	_pending_positions[graph_node] = graph_node.position_offset
+	mark_lanes_dirty()
 
 
 func _on_node_selected(graph_node: Node) -> void:
@@ -432,6 +434,7 @@ func _reconnect_all_slots() -> void:
 					_back_wires.append([from_node.graph_view, from_port, to_node.graph_view, to_port])
 			else:
 				connect_node(from_view_name, from_port, to_view_name, to_port)
+				mark_lanes_dirty()
 
 
 func _get_visible_properties(node: InspectableNode) -> Array[Property]:
@@ -588,6 +591,7 @@ func _on_disconnection_request(
 	# can miss here, and a wire it misses stays drawn for the whole drag.
 	if is_node_connected(from_view_name, from_port, to_view_name, to_port):
 		disconnect_node(from_view_name, from_port, to_view_name, to_port)
+		mark_lanes_dirty()
 
 	_finish_disconnect.call_deferred()
 
