@@ -1015,10 +1015,7 @@ func _add_jump_link(from_node: InspectableNode, from_property: String, to_node: 
 	link.add_theme_font_size_override("font_size", 12)
 	link.add_theme_color_override("font_color", Color("#d77a6a"))
 	var target_view: GraphNode = to_node.graph_view
-	link.pressed.connect(func() -> void:
-		set_selected(target_view)
-		jumped.emit()
-		scroll_offset = target_view.position_offset * zoom - size / 2.0 + target_view.size * zoom / 2.0)
+	link.pressed.connect(go_to.bind(target_view))
 	from_node.graph_view.add_child(link)
 
 
@@ -1107,13 +1104,19 @@ func _hook_back_wire_redraws() -> void:
 	scroll_offset_changed.connect(func(_o: Vector2) -> void: queue_redraw())
 	node_selected.connect(func(_n: Node) -> void: queue_redraw())
 	node_deselected.connect(func(_n: Node) -> void: queue_redraw())
+	gui_input.connect(_on_arc_input)
 	child_entered_tree.connect(func(child: Node) -> void:
 		if child is GraphNode:
 			(child as GraphNode).position_offset_changed.connect(queue_redraw))
 
 
+## Each drawn arc's points, with its two ends, for clicking on it: [points, from_view, to_view].
+var _arcs: Array = []
+
+
 func _draw() -> void:
 	_hook_back_wire_redraws()
+	_arcs.clear()
 	if _back_wires.is_empty():
 		return
 	for wire: Array in _back_wires:
@@ -1127,12 +1130,12 @@ func _draw() -> void:
 		var end: Vector2 = to_view.position + to_view.get_input_port_position(wire[3]) * zoom
 		var lit: bool = from_view.selected or to_view.selected
 		var colour: Color = ThemeLayout.accent_color.lightened(0.25) if lit else Color(1, 1, 1, 0.22)
-		_dashed_arc(start, end, colour, (2.0 if lit else 1.2) * zoom)
+		_arcs.append([_dashed_arc(start, end, colour, (2.0 if lit else 1.2) * zoom), from_view, to_view])
 
 
 ## An S-shaped arc out of the right of one card and into the left of another, dashed, with
 ## an arrowhead at the card it leads to.
-func _dashed_arc(start: Vector2, end: Vector2, colour: Color, width: float) -> void:
+func _dashed_arc(start: Vector2, end: Vector2, colour: Color, width: float) -> PackedVector2Array:
 	var reach: float = maxf(80.0 * zoom, absf(start.y - end.y) * 0.25)
 	var c1: Vector2 = start + Vector2(reach, 0)
 	var c2: Vector2 = end - Vector2(reach, 0)
@@ -1169,3 +1172,46 @@ func _dashed_arc(start: Vector2, end: Vector2, colour: Color, width: float) -> v
 	var side: Vector2 = Vector2(-back.y, back.x)
 	var size: float = 7.0 * zoom
 	draw_colored_polygon(PackedVector2Array([tip, tip + back * size + side * size * 0.55, tip + back * size - side * size * 0.55]), colour)
+	return points
+
+
+## The arc under the pointer, as [points, from_view, to_view, where along it 0..1], or [].
+func _arc_at(at: Vector2) -> Array:
+	var reach: float = 7.0
+	for arc: Array in _arcs:
+		var points: PackedVector2Array = arc[0]
+		for i: int in points.size() - 1:
+			var near: Vector2 = Geometry2D.get_closest_point_to_segment(at, points[i], points[i + 1])
+			if near.distance_to(at) <= reach:
+				return [points, arc[1], arc[2], float(i) / maxf(1.0, points.size() - 1)]
+	return []
+
+
+## A click on a dashed arc goes to its far end: the card it leads to, or, clicked near the
+## arrow, back to where it starts. The hand cursor says it can be clicked.
+func _on_arc_input(event: InputEvent) -> void:
+	if _arcs.is_empty():
+		return
+	if event is InputEventMouseMotion:
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not _arc_at(event.position).is_empty() else Control.CURSOR_ARROW
+		return
+	var click: InputEventMouseButton = event as InputEventMouseButton
+	if click == null or not click.pressed or click.button_index != MOUSE_BUTTON_LEFT:
+		return
+	var hit: Array = _arc_at(click.position)
+	if hit.is_empty():
+		return
+	accept_event()
+	go_to(hit[2] if hit[3] < 0.85 else hit[1])
+
+
+## Brings a card to the middle of the view and picks it; back/forward remember where we were.
+func go_to(view: GraphNode) -> void:
+	if not is_instance_valid(view):
+		return
+	jumped.emit()
+	# a pick on the graph: the fields stay shut, as for any single click
+	pressed_on_text = true
+	get_tree().create_timer(0.3).timeout.connect(func() -> void: pressed_on_text = false)
+	set_selected(view)
+	scroll_offset = (view.position_offset + view.size / 2.0) * zoom - size / 2.0
