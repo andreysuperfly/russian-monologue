@@ -614,6 +614,7 @@ Lay Out Tight (Undo: ⌘Z),Разложить плотно (отмена: ⌘Z)
 Lay Out Roomy (Undo: ⌘Z),Разложить просторно (отмена: ⌘Z)
 Separate Parallel Wires,Разделять параллельные линии
 Separate Wires,Разделять линии
+Avoid Cards,Огибать карточки
 Route parallel wires in separate lanes so they do not merge (Undo: toggle again),"Вести параллельные линии в отдельных полосах, чтобы они не сливались (отмена: нажать ещё раз)"
 Route parallel wires in separate lanes so they do not overlap,"Вести параллельные линии в отдельных полосах, чтобы они не накладывались"
 Go to the card this leads to,"Перейти к карточке, куда это ведёт"

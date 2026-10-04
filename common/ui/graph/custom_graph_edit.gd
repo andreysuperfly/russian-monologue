@@ -25,10 +25,30 @@ var separate_wire_lanes: bool = true:
 			connection_lines_curvature = connection_lines_curvature
 			queue_redraw()
 
+## When enabled, wires avoid cutting through intermediate cards between source and target,
+## detouring smoothly around them (russian-monologue).
+var avoid_card_obstacles: bool = true:
+	set(value):
+		if avoid_card_obstacles != value:
+			avoid_card_obstacles = value
+			_lanes_dirty = true
+			_update_lane_offsets()
+			connection_lines_curvature = connection_lines_curvature
+			queue_redraw()
+
 
 func _ready() -> void:
 	_hide_default_scrollbars()
 	_wire_thickness = connection_lines_thickness
+
+	var cfg: Node = get_node_or_null("/root/ConfigManager")
+	if cfg and cfg.has_method("get_config"):
+		var sw: Variant = cfg.get_config("graph/separate_wire_lanes", true)
+		if sw != null:
+			separate_wire_lanes = bool(sw)
+		var ac: Variant = cfg.get_config("graph/avoid_card_obstacles", true)
+		if ac != null:
+			avoid_card_obstacles = bool(ac)
 
 	connection_drag_started.connect(_on_connection_drag_started)
 	connection_drag_ended.connect(_on_connection_drag_ended)
@@ -103,13 +123,17 @@ func _get_connection_line(from_position: Vector2, to_position: Vector2) -> Packe
 	# backwards takes the detour — a short forward one used to loop on itself
 	var step: float = 24.0 * zoom
 	if to_position.x > from_position.x + 2.0:
-		var mid_x: float = _get_wire_mid_x(from_position, to_position)
-		raw_points = [
-			from_position,
-			Vector2(mid_x, from_position.y),
-			Vector2(mid_x, to_position.y),
-			to_position,
-		]
+		var detour_pts: Array[Vector2] = _get_detour_points(from_position, to_position)
+		if not detour_pts.is_empty():
+			raw_points = detour_pts
+		else:
+			var mid_x: float = _get_wire_mid_x(from_position, to_position)
+			raw_points = [
+				from_position,
+				Vector2(mid_x, from_position.y),
+				Vector2(mid_x, to_position.y),
+				to_position,
+			]
 	else:
 		var mid_y: float = (from_position.y + to_position.y) * 0.5
 		if is_equal_approx(from_position.y, to_position.y):
@@ -176,6 +200,8 @@ func _get_connection_line(from_position: Vector2, to_position: Vector2) -> Packe
 var _lanes_dirty: bool = true
 var _lane_turns: Dictionary = {}  # key String -> float turn_x in canvas px
 var _lane_list: Array[Dictionary] = []  # list of { "p1": Vector2, "p2": Vector2, "turn_x": float }
+var _detour_routes: Dictionary = {}  # key String -> Array[Vector2] (canvas coords)
+var _detour_list: Array[Dictionary] = []  # list of { "p1": Vector2, "p2": Vector2, "points": Array[Vector2] }
 
 
 func _get_wire_mid_x(from_position: Vector2, to_position: Vector2) -> float:
@@ -197,20 +223,57 @@ func _get_wire_mid_x(from_position: Vector2, to_position: Vector2) -> float:
 	return base_mid
 
 
-## Recalculates parallel lane turn coordinates so overlapping vertical wires in the same corridor
-## do not merge into a single line (russian-monologue).
+func _get_detour_points(from_position: Vector2, to_position: Vector2) -> Array[Vector2]:
+	if not avoid_card_obstacles:
+		return []
+	if _lanes_dirty or (_detour_routes.is_empty() and _detour_list.is_empty()):
+		_update_lane_offsets()
+	if _detour_routes.is_empty() and _detour_list.is_empty():
+		return []
+
+	var c_from: Vector2 = from_position / zoom
+	var c_to: Vector2 = to_position / zoom
+	var key: String = "%d,%d>%d,%d" % [roundi(c_from.x), roundi(c_from.y), roundi(c_to.x), roundi(c_to.y)]
+	var pts_var: Variant = _detour_routes.get(key)
+	if pts_var != null:
+		var res: Array[Vector2] = []
+		for pt: Vector2 in (pts_var as Array):
+			res.append(pt * zoom)
+		return res
+
+	# fallback: match by close canvas coordinates (within 4px)
+	for rec: Dictionary in _detour_list:
+		if rec.p1.distance_squared_to(c_from) <= 16.0 and rec.p2.distance_squared_to(c_to) <= 16.0:
+			var res: Array[Vector2] = []
+			for pt: Vector2 in (rec.points as Array):
+				res.append(pt * zoom)
+			return res
+
+	return []
+
+
+## Recalculates parallel lane turn coordinates and obstacle detour paths (russian-monologue).
 func _update_lane_offsets() -> void:
 	_lane_turns.clear()
 	_lane_list.clear()
+	_detour_routes.clear()
+	_detour_list.clear()
 	_lanes_dirty = false
-	if not separate_wire_lanes:
-		return
+
 	var conns: Array[Dictionary] = get_connection_list()
 	if conns.is_empty():
 		return
 
-	# Collect all forward connections with vertical travel (in canvas space)
-	var wires: Array[Dictionary] = []
+	# Pre-collect all visible GraphNodes for fast obstacle testing
+	var all_graph_nodes: Array[GraphNode] = []
+	for child in get_children():
+		if child is GraphNode and child.visible:
+			all_graph_nodes.append(child as GraphNode)
+
+	# Collect all forward connections
+	var standard_wires: Array[Dictionary] = []
+	var raw_detours: Array[Dictionary] = []
+
 	for c: Dictionary in conns:
 		var fn: GraphNode = get_node_or_null(NodePath(c.from_node)) as GraphNode
 		var tn: GraphNode = get_node_or_null(NodePath(c.to_node)) as GraphNode
@@ -222,21 +285,140 @@ func _update_lane_offsets() -> void:
 			continue
 		var p1: Vector2 = fn.position_offset + fn.get_output_port_position(c.from_port)
 		var p2: Vector2 = tn.position_offset + tn.get_input_port_position(c.to_port)
-		# Only forward wires with vertical travel
-		if p2.x <= p1.x + 2.0 or absf(p2.y - p1.y) <= 4.0:
+		# Only forward wires
+		if p2.x <= p1.x + 2.0:
 			continue
-		wires.append({
-			"p1": p1,
-			"p2": p2,
-			"nominal_x": (p1.x + p2.x) * 0.5,
-			"y_min": minf(p1.y, p2.y),
-			"y_max": maxf(p1.y, p2.y),
-			"down": p2.y >= p1.y,
-		})
 
-	# Group wires into clusters of mutually conflicting vertical segments
+		# Check for intermediate obstacle cards
+		var obstacles: Array[GraphNode] = []
+		if avoid_card_obstacles:
+			var direct_y_min: float = minf(p1.y, p2.y) - 6.0
+			var direct_y_max: float = maxf(p1.y, p2.y) + 6.0
+			for obs: GraphNode in all_graph_nodes:
+				if obs == fn or obs == tn:
+					continue
+				var obs_rect: Rect2 = Rect2(obs.position_offset, obs.size)
+				# Does obstacle lie horizontally strictly between p1 and p2?
+				if obs_rect.position.x < p2.x - 14.0 and obs_rect.end.x > p1.x + 14.0:
+					# Does obstacle intersect the direct wire vertical span?
+					if obs_rect.end.y > direct_y_min and obs_rect.position.y < direct_y_max:
+						obstacles.append(obs)
+
+		if not obstacles.is_empty():
+			raw_detours.append({
+				"fn": fn,
+				"tn": tn,
+				"p1": p1,
+				"p2": p2,
+				"obstacles": obstacles,
+				"conn_key": "%d,%d>%d,%d" % [roundi(p1.x), roundi(p1.y), roundi(p2.x), roundi(p2.y)],
+			})
+		elif separate_wire_lanes and absf(p2.y - p1.y) > 4.0:
+			standard_wires.append({
+				"p1": p1,
+				"p2": p2,
+				"nominal_x": (p1.x + p2.x) * 0.5,
+				"y_min": minf(p1.y, p2.y),
+				"y_max": maxf(p1.y, p2.y),
+				"down": p2.y >= p1.y,
+			})
+
+	# 1. Process obstacle detours (routing wires cleanly around cards)
+	var detour_groups: Dictionary = {}
+	for dw: Dictionary in raw_detours:
+		var obstacles: Array = dw.obstacles
+		var min_obs_left: float = INF
+		var max_obs_right: float = -INF
+		var min_obs_top: float = INF
+		var max_obs_bottom: float = -INF
+		for obs: GraphNode in obstacles:
+			min_obs_left = minf(min_obs_left, obs.position_offset.x)
+			max_obs_right = maxf(max_obs_right, obs.position_offset.x + obs.size.x)
+			min_obs_top = minf(min_obs_top, obs.position_offset.y)
+			max_obs_bottom = maxf(max_obs_bottom, obs.position_offset.y + obs.size.y)
+
+		var mid_obs_y: float = (min_obs_top + max_obs_bottom) * 0.5
+		var wire_center_y: float = (dw.p1.y + dw.p2.y) * 0.5
+		var go_below: bool = (wire_center_y >= mid_obs_y)
+
+		dw["min_obs_left"] = min_obs_left
+		dw["max_obs_right"] = max_obs_right
+		dw["min_obs_top"] = min_obs_top
+		dw["max_obs_bottom"] = max_obs_bottom
+		dw["go_below"] = go_below
+
+		var g_key: String = "%d_%d_%d" % [roundi(min_obs_left / 40.0), roundi(max_obs_right / 40.0), 1 if go_below else 0]
+		(detour_groups.get_or_add(g_key, []) as Array).append(dw)
+
+	for g_key: String in detour_groups:
+		var group: Array = detour_groups[g_key]
+		group.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			if a.go_below:
+				return a.p1.y < b.p1.y
+			else:
+				return a.p1.y > b.p1.y
+		)
+		for idx: int in group.size():
+			var dw: Dictionary = group[idx]
+			var p1: Vector2 = dw.p1
+			var p2: Vector2 = dw.p2
+			var min_obs_left: float = dw.min_obs_left
+			var max_obs_right: float = dw.max_obs_right
+			var min_obs_top: float = dw.min_obs_top
+			var max_obs_bottom: float = dw.max_obs_bottom
+			var go_below: bool = dw.go_below
+
+			var x1_min: float = p1.x + 8.0
+			var x1_max: float = maxf(x1_min, min_obs_left - 8.0)
+			var turn1_x: float = clampf((p1.x + min_obs_left) * 0.5, x1_min, x1_max)
+
+			var x2_min: float = max_obs_right + 8.0
+			var x2_max: float = maxf(x2_min, p2.x - 8.0)
+			var turn2_x: float = clampf((max_obs_right + p2.x) * 0.5, x2_min, x2_max)
+
+			var base_margin: float = 22.0 + float(idx) * 14.0
+			var detour_y: float = (max_obs_bottom + base_margin) if go_below else (min_obs_top - base_margin)
+
+			# Avoid any secondary obstacles across the detour span
+			for other: GraphNode in all_graph_nodes:
+				if other == dw.fn or other == dw.tn or (dw.obstacles as Array).has(other):
+					continue
+				var o_left: float = other.position_offset.x
+				var o_right: float = other.position_offset.x + other.size.x
+				if o_right > turn1_x and o_left < turn2_x:
+					var o_top: float = other.position_offset.y
+					var o_bottom: float = other.position_offset.y + other.size.y
+					if go_below and detour_y >= o_top - 6.0 and detour_y <= o_bottom + 6.0:
+						detour_y = maxf(detour_y, o_bottom + base_margin)
+					elif not go_below and detour_y >= o_top - 6.0 and detour_y <= o_bottom + 6.0:
+						detour_y = minf(detour_y, o_top - base_margin)
+
+			# Stagger turns slightly if multiple wires detour together
+			if idx > 0:
+				turn1_x = clampf(turn1_x + float(idx) * 6.0, x1_min, x1_max)
+				turn2_x = clampf(turn2_x - float(idx) * 6.0, x2_min, x2_max)
+
+			var pts: Array[Vector2] = [
+				p1,
+				Vector2(turn1_x, p1.y),
+				Vector2(turn1_x, detour_y),
+				Vector2(turn2_x, detour_y),
+				Vector2(turn2_x, p2.y),
+				p2,
+			]
+			_detour_routes[dw.conn_key] = pts
+			_detour_list.append({
+				"p1": p1,
+				"p2": p2,
+				"points": pts,
+			})
+
+	# 2. Process standard vertical lane clustering
+	if not separate_wire_lanes or standard_wires.is_empty():
+		return
+
 	var clusters: Array = []
-	for w: Dictionary in wires:
+	for w: Dictionary in standard_wires:
 		var merged_into: Array = []
 		for cl: Array in clusters:
 			var overlaps: bool = false
@@ -261,9 +443,6 @@ func _update_lane_offsets() -> void:
 	for cl: Array in clusters:
 		if cl.size() <= 1:
 			continue
-		# Order wires from innermost (smallest X, travels furthest) to outermost (largest X, peels off earliest):
-		# For wires going down: larger p2.y travels further down -> inner lane (index 0). Smaller p2.y peels off first -> outer lane.
-		# For wires going up: smaller p2.y travels further up -> inner lane (index 0). Larger p2.y peels off first -> outer lane.
 		cl.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 			if a.down != b.down:
 				return a.down

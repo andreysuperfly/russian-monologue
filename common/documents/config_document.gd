@@ -49,6 +49,14 @@ func initialize_properties() -> void:
 		.set_type("bool")
 		.default(true))
 
+	define_property(Property.new("graph/separate_wire_lanes")
+		.set_type("bool")
+		.default(true))
+
+	define_property(Property.new("graph/avoid_card_obstacles")
+		.set_type("bool")
+		.default(true))
+
 
 func set_property_value(pname: String, pvalue: Variant) -> void:
 	super.set_property_value(pname, pvalue)
