@@ -252,6 +252,14 @@ static func refresh_preview(graph_node: GraphNode, node: InspectableNode) -> voi
 ## taller than [constant PREVIEW_MAX_HEIGHT] however much its preview decided to draw.
 static func _add_preview(graph_node: GraphNode, node: InspectableNode) -> void:
 	var preview: Control = node._build_preview(_language())
+	# no preview of its own: an add-on may explain the card in words, as the game's add-on says
+	# where a dialogue is started from on its «Начало» (russian-monologue)
+	if preview == null:
+		for plugin: MonologuePlugin in MonologueRegistry.get_instance().get_installed_plugins():
+			var note: String = plugin.card_note(node)
+			if not note.is_empty():
+				preview = NodePreview.line(NodePreview.plain(note))
+				break
 	if preview == null:
 		return
 

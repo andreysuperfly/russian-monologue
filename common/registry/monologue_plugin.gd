@@ -40,6 +40,12 @@ func usage_places(_object: InspectableObject, _target_id: String) -> Array:
 	return []
 
 
+## A line of explanation for [param node]'s card, in plain words, shown under its rows when the
+## node draws no preview of its own (russian-monologue). "" for none.
+func card_note(_node: InspectableNode) -> String:
+	return ""
+
+
 ## Called on uninstall. Types registered through [param registry] are removed automatically.
 ## Override only for extra teardown.
 func unregister(_registry: MonologueRegistry) -> void:
