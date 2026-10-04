@@ -24,6 +24,7 @@ func _ready() -> void:
 	EventBus.select_new_node.connect(_select_new_node)
 	EventBus.test_trigger.connect(test_project)
 	_keep_clear_of_window_buttons()
+	_drag_window_by_top_bar()
 	_add_history_buttons()
 
 	var args: PackedStringArray = OS.get_cmdline_args() + OS.get_cmdline_user_args()
@@ -217,6 +218,26 @@ func _keep_clear_of_window_buttons() -> void:
 		gap.visible = margins.x > 0
 	fit.call()
 	get_tree().root.size_changed.connect(fit)
+
+
+## The top bar stands where the title bar would be, so it moves the window like one: drag an
+## empty part of it, double-click to fill the screen or come back (russian-monologue).
+func _drag_window_by_top_bar() -> void:
+	var header: Control = get_node_or_null("VBox/Header")
+	if header == null:
+		return
+	header.gui_input.connect(func(event: InputEvent) -> void:
+		var click: InputEventMouseButton = event as InputEventMouseButton
+		if click == null or not click.pressed or click.button_index != MOUSE_BUTTON_LEFT:
+			return
+		if DisplayServer.window_get_mode() in [DisplayServer.WINDOW_MODE_FULLSCREEN, DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN]:
+			return
+		header.accept_event()
+		if click.double_click:
+			var big: bool = DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_MAXIMIZED
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if big else DisplayServer.WINDOW_MODE_MAXIMIZED)
+		else:
+			DisplayServer.window_start_drag())
 
 
 # ---------- back / forward through the storylines looked at (russian-monologue) ----------
