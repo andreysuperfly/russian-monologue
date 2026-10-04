@@ -3,7 +3,9 @@ extends Node
 signal project_loaded
 signal file_prompt_done
 
-const SAVE_PROMPT: String = "%s has been modified."
+## The file and the folder it is in: the whole path is too long to read, the folder tells which
+## copy it is (russian-monologue).
+const SAVE_PROMPT: String = "The file «%s» in the folder «%s» has changes that are not saved."
 
 var current_project: MonologueProject
 var _cancel_close: bool = false
@@ -28,7 +30,7 @@ func close_current_project() -> bool:
 		EventBus.ask_dialog.emit(
 			_on_close_project_dialog_response,
 			"Save change before closing?",
-			SAVE_PROMPT % current_project.project_path,
+			tr(SAVE_PROMPT) % [current_project.project_path.get_file(), current_project.project_path.get_base_dir().get_file()],
 			"Save",
 			"Don't Save",
 			"Cancel"

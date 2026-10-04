@@ -36,12 +36,33 @@ func _on_initialize() -> void:
 	line_edit.placeholder_text = placeholder
 
 	var rows: int = settings.get(PropertySettings.KEY_ROWS, 4)
-	_apply_textarea_height.call_deferred(text_edit, rows)
+	if _is_multiline or _is_preview:
+		_apply_textarea_height.call_deferred(text_edit, rows)
 
 	if not _is_preview:
-		line_edit.visible = not _is_multiline
-		text_edit.visible = _is_multiline
+		line_edit.visible = false
+		text_edit.visible = true
+		if not _is_multiline:
+			_wrap_one_line()
 
+
+## A one-line field that is longer than the panel is wide wraps and grows downwards instead of
+## hiding its start (russian-monologue). Still one line of text: Enter ends the edit, a pasted
+## line break becomes a space.
+func _wrap_one_line() -> void:
+	text_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	text_edit.scroll_fit_content_height = true
+	text_edit.custom_minimum_size.y = 0
+	text_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if not text_edit.gui_input.is_connected(_on_one_line_key):
+		text_edit.gui_input.connect(_on_one_line_key)
+
+
+func _on_one_line_key(event: InputEvent) -> void:
+	var key: InputEventKey = event as InputEventKey
+	if key and key.pressed and key.keycode in [KEY_ENTER, KEY_KP_ENTER]:
+		text_edit.accept_event()
+		text_edit.release_focus()
 
 
 func _apply_textarea_height(te: TextEdit, rows: int) -> void:
@@ -148,6 +169,11 @@ func _on_focus_exited() -> void:
 
 
 func _on_textarea_changed() -> void:
+	if not _is_multiline and text_edit.text.contains("\n"):
+		var column: int = text_edit.get_caret_column()
+		text_edit.text = text_edit.text.replace("\r", "").replace("\n", " ")
+		text_edit.set_caret_column(column)
+		return  # setting the text calls this again
 	_write(text_edit.text)
 	emit_value_changed(get_value())
 
