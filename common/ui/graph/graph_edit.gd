@@ -1254,45 +1254,63 @@ func _glide_to(view: GraphNode) -> void:
 		0.0, 1.0, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
-## The card being flashed and how bright its aura is now, 1 → 0.
+## The card being flashed and its overlay panel.
 var _flash_view: GraphNode
 var _flash_amount: float = 0.0
 var _flash_tween: Tween
+var _flash_overlay: Panel
 
 
-## A red aura around [param view] for about a second, so after a jump the eye finds the card
-## among many (russian-monologue).
+## Flashes the card's exact outer border in crisp red when navigating to it (russian-monologue).
 func flash(view: GraphNode) -> void:
 	if not is_instance_valid(view):
 		return
-	_flash_view = view
+	if is_instance_valid(_flash_overlay):
+		_flash_overlay.queue_free()
+		_flash_overlay = null
 	if _flash_tween:
 		_flash_tween.kill()
+
+	_flash_view = view
+	_flash_overlay = Panel.new()
+	_flash_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_flash_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var flash_style: StyleBoxFlat = StyleBoxFlat.new()
+	flash_style.draw_center = false
+	flash_style.set_corner_radius_all(6)
+	flash_style.set_border_width_all(2)
+	flash_style.border_color = Color("#ff3b30", 1.0)
+	_flash_overlay.add_theme_stylebox_override("panel", flash_style)
+
+	view.add_child(_flash_overlay)
+	view.move_child(_flash_overlay, view.get_child_count() - 1)
+
+	_flash_amount = 1.0
 	_flash_tween = create_tween()
-	_flash_tween.tween_method(_set_flash, 1.0, 0.0, 1.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	_flash_tween.tween_method(_set_flash, 1.0, 0.0, 1.2).set_trans(Tween.TRANS_LINEAR)
+	_flash_tween.finished.connect(func() -> void:
+		if is_instance_valid(_flash_overlay):
+			_flash_overlay.queue_free()
+			_flash_overlay = null
+	)
 
 
 func _set_flash(amount: float) -> void:
 	_flash_amount = amount
-	queue_redraw()
+	if not is_instance_valid(_flash_overlay):
+		return
+	var style: StyleBoxFlat = _flash_overlay.get_theme_stylebox("panel") as StyleBoxFlat
+	if not style:
+		return
+	# 3 crisp flashes of the black outline in vivid red: starts ON, blinks cleanly, fades out
+	var wave: float = maxf(0.0, cos((1.0 - amount) * PI * 6.0))
+	var alpha: float = wave * clampf(amount * 1.5, 0.0, 1.0)
+	style.border_color = Color(1.0, 0.23, 0.19, alpha)
 
 
 func _draw_flash() -> void:
-	if _flash_amount <= 0.0 or not is_instance_valid(_flash_view) or not _flash_view.visible:
-		return
-	# two soft pulses that fade out, in the muted red of the ↩ links — a glow, not an alarm
-	var pulse: float = 0.6 + 0.4 * cos(_flash_amount * TAU * 2.0)
-	var alpha: float = clampf(_flash_amount * 1.4, 0.0, 1.0) * pulse
-	var tone: Color = Color("#d77a6a")
-	var glow: StyleBoxFlat = StyleBoxFlat.new()
-	glow.draw_center = false
-	glow.set_corner_radius_all(int(9 * zoom))
-	glow.set_border_width_all(maxi(1, int(1.5 * zoom)))
-	glow.border_color = Color(tone, 0.7 * alpha)
-	glow.shadow_color = Color(tone.darkened(0.15), 0.4 * alpha)
-	glow.shadow_size = int(12 * zoom)
-	var grow: float = 2.0 * zoom
-	draw_style_box(glow, Rect2(_flash_view.position, _flash_view.size * zoom).grow(grow))
+	pass
 
 
 ## Brings [param node]'s card into view and flashes it, once its storyline is on the graph:
