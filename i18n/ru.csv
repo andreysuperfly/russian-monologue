@@ -606,6 +606,12 @@ Player's answer,Ответ игрока
 Player's choice,Выбор игрока
 A check,Проверка условия
 Choices,Выборы
+Lay Out Tight,Разложить плотно
+Lay Out Roomy,Разложить просторно
+Tight,Плотно
+Roomy,Просторно
+Lay Out Tight (Undo: ⌘Z),Разложить плотно (отмена: ⌘Z)
+Lay Out Roomy (Undo: ⌘Z),Разложить просторно (отмена: ⌘Z)
 Go to the card this leads to,"Перейти к карточке, куда это ведёт"
 Colour the whole line from here…,Цвет всей линии отсюда…
 "This card and every card after it, up to where the line joins another.","Эта карточка и все после неё — до места, где линия сливается с другой."

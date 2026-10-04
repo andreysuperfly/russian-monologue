@@ -273,6 +273,25 @@ func _lay_header_in_a_row() -> void:
 	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL  # a third of the spare room, with the two springs
 	center.size_flags_stretch_ratio = 1.0
 
+	# quick buttons to lay cards out in story order (russian-monologue)
+	var header_right: Control = row.get_node_or_null("HeaderRight")
+	if header_right:
+		var tight_btn: Button = Button.new()
+		tight_btn.text = tr("Tight")
+		tight_btn.tooltip_text = tr("Lay Out Tight (Undo: ⌘Z)")
+		tight_btn.focus_mode = Control.FOCUS_NONE
+		tight_btn.pressed.connect(func() -> void: if graph.has_method("lay_out"): graph.lay_out(false))
+		header_right.add_child(tight_btn)
+		header_right.move_child(tight_btn, 0)
+
+		var roomy_btn: Button = Button.new()
+		roomy_btn.text = tr("Roomy")
+		roomy_btn.tooltip_text = tr("Lay Out Roomy (Undo: ⌘Z)")
+		roomy_btn.focus_mode = Control.FOCUS_NONE
+		roomy_btn.pressed.connect(func() -> void: if graph.has_method("lay_out"): graph.lay_out(true))
+		header_right.add_child(roomy_btn)
+		header_right.move_child(roomy_btn, 1)
+
 
 static func _spring() -> Control:
 	var spring: Control = Control.new()

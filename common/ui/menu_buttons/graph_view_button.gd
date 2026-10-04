@@ -10,6 +10,16 @@ func _build_menu() -> void:
 		true,
 		["mnl_graph_show_grid"]
 	)
+	# lay the cards out in story order (russian-monologue)
+	add_separator()
+	add_row("Lay Out Tight", func() -> void: _lay_out(false))
+	add_row("Lay Out Roomy", func() -> void: _lay_out(true))
+
+
+func _lay_out(roomy: bool) -> void:
+	var graph: Node = get_tree().get_first_node_in_group(&"monologue_graph")
+	if graph and graph.has_method("lay_out"):
+		graph.lay_out(roomy)
 
 
 func _on_snap(enabled: bool) -> void:

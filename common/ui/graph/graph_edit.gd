@@ -51,6 +51,7 @@ func _ready() -> void:
 	gui_input.connect(_on_graph_gui_input)
 
 	add_theme_color_override("activity", ThemeLayout.accent_color)
+	add_to_group(&"monologue_graph")
 
 
 func _on_language_changed(_code: String) -> void:
@@ -1307,3 +1308,144 @@ static func reveal(node: InspectableNode) -> void:
 			continue
 		graph.go_to(node.graph_view)
 		return
+
+
+# ---------- laying the cards out (russian-monologue) ----------
+# Left to right in the order the story goes: each column one step further. The cards a card's
+# rows lead to stand in a column in the order of those rows, each level with its row where there
+# is room, so the first answer's card is on top. Wires back to an earlier card do not count as a
+# step. «Tight» packs the columns close; «roomy» leaves wide lanes so the wires run between the
+# cards instead of in one bundle. One undo step.
+
+func lay_out(roomy: bool) -> void:
+	var storyline: StorylineDocument = get_storyline()
+	if storyline == null:
+		return
+	var gap_x: float = 150.0 if roomy else 60.0
+	var gap_y: float = 70.0 if roomy else 22.0
+	var cards: Array[InspectableNode] = []
+	for node: InspectableNode in storyline.nodes:
+		if node.get_type() != "note" and is_instance_valid(node.graph_view):
+			cards.append(node)
+	if cards.is_empty():
+		return
+	var ids: Dictionary = {}
+	for node: InspectableNode in cards:
+		ids[node.get_id()] = node
+	# the wires out of each card, in the order of its rows: [to_id, port]
+	var outs: Dictionary = {}
+	for c: NodeConnection in storyline.connections:
+		if not ids.has(c.from_node_id) or not ids.has(c.to_node_id):
+			continue
+		var from_view: GraphNode = (ids[c.from_node_id] as InspectableNode).graph_view
+		var port: int = get_port_index_for_property(from_view.name, c.get_from_name(), true)
+		(outs.get_or_add(c.from_node_id, []) as Array).append([c.to_node_id, port])
+	for list: Variant in outs.values():
+		(list as Array).sort_custom(func(a: Array, b: Array) -> bool: return a[1] < b[1])
+	# starts: the root first, then cards nothing leads to (reached from the game's code), top down
+	var has_in: Dictionary = {}
+	for list: Variant in outs.values():
+		for edge: Array in list:
+			has_in[edge[0]] = true
+	var starts: Array[InspectableNode] = []
+	starts.assign(cards.filter(func(n: InspectableNode) -> bool: return not has_in.has(n.get_id())))
+	starts.sort_custom(func(a: InspectableNode, b: InspectableNode) -> bool:
+		if (a.get_type() == "root") != (b.get_type() == "root"):
+			return a.get_type() == "root"
+		return a.graph_view.position_offset.y < b.graph_view.position_offset.y)
+	# walk the story; a wire back to a card still on the way is a loop, not a step
+	var state: Dictionary = {}
+	var order: Array[String] = []
+	var back: Dictionary = {}
+	var walk: Callable = func(this: Callable, id: String) -> void:
+		state[id] = 1
+		for edge: Array in outs.get(id, []):
+			var to: String = edge[0]
+			if state.get(to, 0) == 1:
+				back["%s>%s" % [id, to]] = true
+			elif state.get(to, 0) == 0:
+				this.call(this, to)
+		state[id] = 2
+		order.push_front(id)
+	for start: InspectableNode in starts:
+		if state.get(start.get_id(), 0) == 0:
+			walk.call(walk, start.get_id())
+	for node: InspectableNode in cards:  # a loop with no way in from outside
+		if state.get(node.get_id(), 0) == 0:
+			walk.call(walk, node.get_id())
+	# each card's column: one past the furthest card leading to it
+	var column: Dictionary = {}
+	for id: String in order:
+		column[id] = column.get(id, 0)
+		for edge: Array in outs.get(id, []):
+			if not back.has("%s>%s" % [id, edge[0]]):
+				column[edge[0]] = maxi(column.get(edge[0], 0), column[id] + 1)
+	var columns: Array = []
+	for id: String in order:
+		while columns.size() <= column[id]:
+			columns.append([])
+	# who leads to each card, through which row: the first such parent places it
+	var parents: Dictionary = {}
+	for id: String in order:
+		for edge: Array in outs.get(id, []):
+			if not back.has("%s>%s" % [id, edge[0]]):
+				(parents.get_or_add(edge[0], []) as Array).append([id, edge[1]])
+	var place: Dictionary = {}  # id -> Vector2
+	var rank_in_column: Dictionary = {}
+	var x: float = 0.0
+	for c: int in columns.size():
+		var here: Array = []
+		for id: String in order:
+			if column[id] == c:
+				here.append(id)
+		# in the order of the parents above them, then of the rows they hang from
+		here.sort_custom(func(a: String, b: String) -> bool: return _lay_key(a, parents, rank_in_column, starts) < _lay_key(b, parents, rank_in_column, starts))
+		var width: float = 0.0
+		var bottom: float = -INF
+		for i: int in here.size():
+			var id: String = here[i]
+			rank_in_column[id] = i
+			var view: GraphNode = (ids[id] as InspectableNode).graph_view
+			var want: float = bottom + gap_y if bottom > -INF else 0.0
+			# level with the row it hangs from
+			var from: Array = (parents.get(id, []) as Array)
+			if not from.is_empty() and place.has(from[0][0]):
+				var parent_view: GraphNode = (ids[from[0][0]] as InspectableNode).graph_view
+				var row_y: float = place[from[0][0]].y
+				if from[0][1] >= 0 and from[0][1] < parent_view.get_output_port_count():
+					row_y += parent_view.get_output_port_position(from[0][1]).y
+				var into: float = view.get_input_port_position(0).y if view.get_input_port_count() > 0 else 0.0
+				want = maxf(want, row_y - into)
+			place[id] = Vector2(x, want)
+			bottom = want + view.size.y
+			width = maxf(width, view.size.x)
+		x += width + gap_x
+	# keep the start where it was, so the view does not jump
+	var anchor_id: String = starts[0].get_id() if not starts.is_empty() else order[0]
+	var shift: Vector2 = (ids[anchor_id] as InspectableNode).graph_view.position_offset - place[anchor_id]
+	var history: CommandManager = storyline.history
+	var step: CommandTransaction = history.begin("Lay out %d cards" % place.size())
+	for id: String in place:
+		var node: InspectableNode = ids[id]
+		var to: Vector2 = (place[id] + shift).snapped(Vector2(10, 10))
+		var was: Variant = node.get_property_value("editor_position")
+		var now: Array = [to.x, to.y]
+		if was == now:
+			continue
+		history.execute(PropertyChangeCommand.new(node, "editor_position", was if was is Array else [0.0, 0.0], now))
+	step.commit()
+	queue_redraw()
+
+
+## Where a card goes in its column: under the parent placed highest, by the row it hangs from;
+## a start by its turn among the starts.
+static func _lay_key(id: String, parents: Dictionary, rank: Dictionary, starts: Array[InspectableNode]) -> int:
+	var best: int = 1 << 30
+	for p: Array in parents.get(id, []):
+		if rank.has(p[0]):
+			best = mini(best, int(rank[p[0]]) * 1000 + maxi(int(p[1]), 0))
+	if best == 1 << 30:
+		for i: int in starts.size():
+			if starts[i].get_id() == id:
+				return (1 << 29) + i
+	return best
