@@ -254,7 +254,7 @@ func _lay_header_in_a_row() -> void:
 	# the open storyline's name, so it is always clear which one is on the graph (russian-monologue)
 	_title = Label.new()
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_title.size_flags_stretch_ratio = 1.4
+	_title.size_flags_stretch_ratio = 2.0
 	_title.custom_minimum_size.x = 60
 	_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -262,7 +262,8 @@ func _lay_header_in_a_row() -> void:
 	_title.mouse_filter = Control.MOUSE_FILTER_PASS
 	_title.add_theme_font_size_override("font_size", 17)
 	_title.add_theme_color_override("font_color", Color(0.93, 0.9, 0.84))
-	var parts: Array = [header.get_node("HeaderLeft"), _title, center, _spring(), header.get_node("HeaderRight")]
+	# the search stands at the right, by the snap and grid buttons
+	var parts: Array = [header.get_node("HeaderLeft"), _title, center, header.get_node("HeaderRight")]
 	for part: Control in parts:
 		if part.get_parent():
 			part.reparent(row, false)

@@ -9,19 +9,20 @@ class_name NodePreview
 
 ## How tall one line of preview is, and the shortest the view will draw one.
 const LINE_HEIGHT: float = 18.0
-## How much of one piece of free text survives, leaving room for what frames it.
-const MAX_PIECE: int = 26
+## How much of one piece of free text survives. Previews wrap now, so this only stops a
+## pasted page (russian-monologue).
+const MAX_PIECE: int = 120
 
 
-## One line of BBCode. Runs off its own edge instead of wrapping, and the view clips it.
+## One line of BBCode; when it does not fit the card's width it goes on to the next line
+## instead of being cut off at the edge (russian-monologue).
 static func line(bbcode: String) -> RichTextLabel:
 	var label: RichTextLabel = RichTextLabel.new()
 	label.bbcode_enabled = true
 	label.text = bbcode
-	label.fit_content = false
+	label.fit_content = true
 	label.scroll_active = false
-	label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	label.clip_contents = true
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.mouse_filter = Control.MOUSE_FILTER_PASS
 	label.theme_type_variation = "GraphNodeViewPreviewLabel"
 	label.custom_minimum_size.y = LINE_HEIGHT

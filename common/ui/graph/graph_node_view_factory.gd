@@ -6,7 +6,7 @@ const SLOT_OUT_TEXTURE: Texture2D = preload("res://ui/assets/icons/slot_out.svg"
 ## view being torn down around it.
 const PREVIEW_NAME: StringName = &"Preview"
 ## As tall as a preview is ever drawn, whatever it decided to build.
-const PREVIEW_MAX_HEIGHT: float = 96.0
+const PREVIEW_MAX_HEIGHT: float = 180.0
 ## How much of a list item's name a node shows. The whole of it, wrapped onto more lines
 ## (russian-monologue); the cap only guards against a pasted page.
 const MAX_LIST_LABEL: int = 400
@@ -234,6 +234,23 @@ static func _add_preview(graph_node: GraphNode, node: InspectableNode) -> void:
 	window.add_child(preview)
 	panel.add_child(window)
 	graph_node.add_child(panel)
+	# wrapped text knows its height only once it has the card's width: the window then grows to
+	# show all of it, still never wider than the card (russian-monologue)
+	var fit: Callable = func() -> void:
+		if not is_instance_valid(preview) or not is_instance_valid(window):
+			return
+		# before the card has its width the text measures as a narrow column; wait for it
+		if window.size.x < 40.0:
+			return
+		var tall: float = clampf(preview.get_combined_minimum_size().y, NodePreview.LINE_HEIGHT, PREVIEW_MAX_HEIGHT)
+		if not is_equal_approx(tall, window.custom_minimum_size.y):
+			var shrinks: bool = tall < window.custom_minimum_size.y
+			window.custom_minimum_size.y = tall
+			# a card grows by itself but never gives height back: hand it back
+			if shrinks and is_instance_valid(graph_node):
+				graph_node.reset_size.call_deferred()
+	window.resized.connect(fit, CONNECT_DEFERRED)
+	preview.minimum_size_changed.connect(fit, CONNECT_DEFERRED)
 
 
 static func _language() -> String:
