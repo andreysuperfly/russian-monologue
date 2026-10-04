@@ -10,6 +10,9 @@ const PREVIEW_MAX_HEIGHT: float = 96.0
 ## How much of a list item's name a node shows. A node is a diagram of the story, not the
 ## story itself: past this the name is cut and the whole of it read in the inspector.
 const MAX_LIST_LABEL: int = 40
+## Titles longer than this wrap onto a second line, at about this width.
+const TITLE_WRAP_AT: int = 24
+const TITLE_WRAP_WIDTH: float = 210.0
 ## How far a list item's type is faded behind the properties framing it.
 const LIST_LABEL_ALPHA: float = 0.5
 
@@ -80,6 +83,10 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 			var own: String = str(node.call("card_title"))
 			if not own.is_empty():
 				key_label.text = own
+		# a long title goes onto a second line instead of stretching the card (russian-monologue)
+		if idx == 0 and key_label.text.length() > TITLE_WRAP_AT:
+			key_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			key_label.custom_minimum_size.x = TITLE_WRAP_WIDTH
 
 		var value_label: Label = Label.new()
 		value_label.mouse_filter = Control.MOUSE_FILTER_PASS
