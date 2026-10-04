@@ -781,8 +781,11 @@ func _offer_on_selection(at_position: Vector2) -> void:
 	menu.add_item("Save as template…", OFFER_TEMPLATE)
 	# colour the card, or the whole branch that runs on from it (russian-monologue)
 	menu.add_separator()
-	menu.add_submenu_node_item(tr("Card colour"), _colour_menu(selection, false))
-	menu.add_submenu_node_item(tr("Branch colour"), _colour_menu(selection, true))
+	# a submenu must be the menu's own child before it is attached, or Godot falls over
+	for whole: bool in [false, true]:
+		var colours: PopupMenu = _colour_menu(selection, whole)
+		menu.add_child(colours)
+		menu.add_submenu_node_item(tr("Branch colour") if whole else tr("Card colour"), colours)
 	# into one of the writer's collections (russian-monologue)
 	var folders: Array = Bookmarks.folder_paths()
 	if not folders.is_empty():
