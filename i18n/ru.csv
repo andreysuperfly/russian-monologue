@@ -605,6 +605,9 @@ A line,Реплика
 Player's answer,Ответ игрока
 Player's choice,Выбор игрока
 A check,Проверка условия
+Choices,Выборы
+Colour the whole line from here…,Цвет всей линии отсюда…
+"This card and every card after it, up to where the line joins another.","Эта карточка и все после неё — до места, где линия сливается с другой."
 The file «%s» in the folder «%s» has changes that are not saved.,В файле «%s» (папка «%s») есть несохранённые изменения.
 All places,Все места
 Where it is given or taken away,Где даёт или отнимает

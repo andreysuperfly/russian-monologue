@@ -36,7 +36,7 @@ func _on_initialize() -> void:
 	line_edit.placeholder_text = placeholder
 
 	var rows: int = settings.get(PropertySettings.KEY_ROWS, 4)
-	if _is_multiline or _is_preview:
+	if _is_multiline and not _is_preview:
 		_apply_textarea_height.call_deferred(text_edit, rows)
 
 	if not _is_preview:
@@ -105,9 +105,37 @@ func set_preview() -> void:
 	if not is_node_ready():
 		await ready
 
-	line_edit.show()
-	text_edit.hide()
-	line_edit.theme_type_variation = "LineEditListItemPreview"
+	# a list row (a choice's answers): wrapped onto up to three lines, the rest scrolls inside,
+	# so a long answer is read, not cut at the box's edge (russian-monologue)
+	line_edit.hide()
+	text_edit.show()
+	text_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	text_edit.scroll_fit_content_height = false
+	text_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for style: StringName in [&"normal", &"focus", &"read_only"]:
+		var box: StyleBox = get_theme_stylebox(style if style != &"focus" else &"normal", &"LineEditListItemPreview")
+		if box:
+			text_edit.add_theme_stylebox_override(style, box)
+	if not text_edit.gui_input.is_connected(_on_one_line_key):
+		text_edit.gui_input.connect(_on_one_line_key)
+	if not text_edit.resized.is_connected(_fit_preview_lines):
+		text_edit.resized.connect(_fit_preview_lines, CONNECT_DEFERRED)
+		text_edit.text_changed.connect(_fit_preview_lines, CONNECT_DEFERRED)
+	_fit_preview_lines.call_deferred()
+
+
+const PREVIEW_MAX_LINES: int = 3
+
+
+func _fit_preview_lines() -> void:
+	if not is_instance_valid(text_edit) or text_edit.size.x < 20.0:
+		return
+	var lines: int = clampi(text_edit.get_total_visible_line_count(), 1, PREVIEW_MAX_LINES)
+	var box: StyleBox = text_edit.get_theme_stylebox(&"normal")
+	var padding: float = (box.content_margin_top + box.content_margin_bottom) if box else 8.0
+	var tall: float = text_edit.get_line_height() * lines + padding
+	if not is_equal_approx(tall, text_edit.custom_minimum_size.y):
+		text_edit.custom_minimum_size.y = tall
 
 
 func display_issues(issues: Array[ValidationIssue]) -> void:

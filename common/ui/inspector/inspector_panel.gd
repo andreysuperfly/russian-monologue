@@ -161,7 +161,34 @@ func rebuild() -> void:
 
 			_create_category_section(category_name, props)
 
+		_add_branch_colour(inspected)
+
 	_pending_expand_category = ""
+
+
+## Under the card's own colour: colour the whole line that runs on from this card, as the
+## right-click menu on the graph does (russian-monologue).
+func _add_branch_colour(inspected: Array[InspectableObject]) -> void:
+	if inspected.size() != 1 or not inspected[0] is InspectableNode:
+		return
+	var node: InspectableNode = inspected[0] as InspectableNode
+	if node.graph_view == null or not is_instance_valid(node.graph_view):
+		return
+	var graph: MonologueGraphEdit = node.graph_view.get_parent() as MonologueGraphEdit
+	if graph == null:
+		return
+	var button: Button = Button.new()
+	button.text = tr("Colour the whole line from here…")
+	button.tooltip_text = tr("This card and every card after it, up to where the line joins another.")
+	button.focus_mode = Control.FOCUS_NONE
+	field_container.add_child(button)
+	var selection: Array[InspectableNode] = [node]
+	button.pressed.connect(func() -> void:
+		var menu: PopupMenu = graph._colour_menu(selection, true)
+		button.add_child(menu)
+		menu.popup_hide.connect(menu.queue_free)
+		menu.position = Vector2i(button.get_screen_position() + Vector2(0, button.size.y))
+		menu.popup())
 
 
 ## The object the inspector reads its context from, meaning ports, exposure toggles and the
