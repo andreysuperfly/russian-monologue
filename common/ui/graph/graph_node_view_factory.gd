@@ -158,7 +158,7 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 			and own_prop != null and own_prop.type != "collection"
 		var shown: Control = key_label
 		if is_item or is_fallback:
-			shown = _coloured_row_label(key_label, is_fallback)
+			shown = _coloured_row_label(key_label, false)
 		if idx > 0:
 			body_rows.append(container)
 			# the row under the pointer lights up a little (russian-monologue)
@@ -356,6 +356,10 @@ static func _build_rows(node: InspectableNode) -> Array[GraphNodeRow]:
 				if not is_compact or _row_has_wire(sub_row, node):
 					rows.append(sub_row)
 
+	# a node may show its rows in an order of its own (a fork: «обычно» first); the ports are
+	# counted from this same list, so the wires follow their rows (russian-monologue)
+	if node.has_method("order_rows"):
+		rows.assign(node.call("order_rows", rows))
 	_number_rows(rows, node)
 	return rows
 
