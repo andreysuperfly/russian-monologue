@@ -156,6 +156,8 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 		# colour, not by boxes (russian-monologue)
 		if idx == 0 and rows.size() > 1:
 			container.draw.connect(_draw_title_rule.bind(container, graph_node))
+		if idx == 0 and tint.a <= 0.0 and type_hue(node.get_type()).a > 0.0:
+			container.draw.connect(_draw_type_strip.bind(container, graph_node, type_hue(node.get_type())))
 
 		container.add_child(shown)
 		# a small «→» on a wired answer or branch: goes to the card it leads to, however far
@@ -476,7 +478,7 @@ static func _go_button(node: InspectableNode, from_name: String) -> Button:
 	go.tooltip_text = TranslationServer.translate("Go to the card this leads to")
 	go.add_theme_font_size_override(&"font_size", 13)
 	go.add_theme_color_override(&"font_color", Color(1, 1, 1, 0.35))
-	go.add_theme_color_override(&"font_hover_color", Color(ROW_IF_COLOUR))
+	go.add_theme_color_override(&"font_hover_color", Color(ROW_HOVER_COLOUR))
 	go.pressed.connect(func() -> void:
 		var view: GraphNode = node.graph_view
 		var graph: MonologueGraphEdit = view.get_parent() as MonologueGraphEdit if is_instance_valid(view) else null
@@ -493,10 +495,13 @@ static func _go_button(node: InspectableNode, from_name: String) -> Button:
 
 
 ## The colours of a card's rows (russian-monologue).
-const ROW_NUMBER_COLOUR: String = "#d0d0d0"
-const ROW_IF_COLOUR: String = "#d77a6a"
+## Three steps of light grey, as dark interfaces do it: what the row says ~65% white, its
+## bookkeeping (number, «если:») ~40%. Red is kept for what can be pressed or is picked.
+const ROW_NUMBER_COLOUR: String = "#6c6c6c"
+const ROW_IF_COLOUR: String = "#7a7a7a"
 const ROW_TEXT_COLOUR: Color = Color("#a8a8a8")
-const ROW_FALLBACK_COLOUR: Color = Color("#8c8c8c")
+const ROW_FALLBACK_COLOUR: Color = Color("#858585")
+const ROW_HOVER_COLOUR: String = "#d77a6a"
 
 
 ## A row's words with its number brighter and «если:» in colour; wraps as the plain label did.
@@ -537,6 +542,22 @@ static func _coloured_row_label(plain_label: Label, fallback: bool) -> RichTextL
 static func _draw_title_rule(row: Control, graph_node: GraphNode) -> void:
 	var y: float = row.size.y + float(graph_node.get_theme_constant(&"separation")) / 2.0
 	row.draw_line(Vector2(0, y), Vector2(row.size.x, y), Color(1, 1, 1, 0.08), 1.0)
+
+
+## What kind of step a card is, at a glance: a thin strip of its muted hue along the top edge,
+## as node editors colour a node's header by its kind. Lines have none: they are the story itself.
+static func _draw_type_strip(row: Control, graph_node: GraphNode, hue: Color) -> void:
+	var titlebar: Control = graph_node.get_titlebar_hbox()
+	var top: float = -row.position.y + (titlebar.size.y if titlebar else 0.0)
+	var inset: float = float(ThemeLayout.radius_md)
+	row.draw_rect(Rect2(-row.position.x + inset, top + 1.0, graph_node.size.x - inset * 2.0, 2.0), hue)
+
+
+## A kind's hue for the strip: the same hue its box is shown in, lighter and quieter.
+static func type_hue(type_name: String) -> Color:
+	if not PREVIEW_HUES.has(type_name):
+		return Color(0, 0, 0, 0)
+	return Color.from_hsv(float(PREVIEW_HUES[type_name]), 0.38, 0.62, 0.9)
 
 
 ## Cuts a list item's name down to what a node has room for, since the name is written
@@ -668,7 +689,7 @@ const PREVIEW_HUES: Dictionary = {
 	"genius_code": 0.75, "action": 0.75, "event": 0.75,
 	"variable": 0.47, "inventory": 0.08,
 	"genius_scene": 0.6, "genius_fork": 0.11, "condition": 0.11,
-	"genius_after": 0.33, "genius_phase": 0.9,
+	"genius_after": 0.33, "genius_phase": 0.9, "choice": 0.16,
 }
 
 

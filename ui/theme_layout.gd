@@ -833,7 +833,9 @@ static func _setup_label(theme: Theme) -> void:
 
 	theme.add_type("GraphNodeViewTitleLabel")
 	theme.set_type_variation("GraphNodeViewTitleLabel", "Label")
-	theme.set_color("font_color", "GraphNodeViewTitleLabel", text_muted_color)
+	# the title is the brightest text on a card, what it holds a step lower, its bookkeeping
+	# (keys, numbers, «если:») lower still (russian-monologue)
+	theme.set_color("font_color", "GraphNodeViewTitleLabel", text_primary_color)
 	theme.set_font_size("font_size", "GraphNodeViewTitleLabel", font_size_lg)
 
 	theme.add_type("GraphNodeViewValueLabel")
@@ -863,7 +865,7 @@ static func _setup_label(theme: Theme) -> void:
 
 	theme.add_type("GraphNodeViewPreviewLabel")
 	theme.set_type_variation("GraphNodeViewPreviewLabel", "RichTextLabel")
-	theme.set_color("default_color", "GraphNodeViewPreviewLabel", text_muted_color)
+	theme.set_color("default_color", "GraphNodeViewPreviewLabel", Color("ababab") if is_theme_dark else text_muted_color)
 	theme.set_stylebox("normal", "GraphNodeViewPreviewLabel", StyleBoxEmpty.new())
 
 	theme.add_type("HeaderSmall")
