@@ -1267,6 +1267,10 @@ func _process(delta: float) -> void:
 		_update_flash_geometry()
 
 
+var _orig_panel_override: StyleBox
+var _orig_panel_selected_override: StyleBox
+
+
 ## Flashes the card's exact outer border in crisp red when navigating to it (russian-monologue).
 func flash(view: GraphNode) -> void:
 	if not is_instance_valid(view):
@@ -1274,6 +1278,9 @@ func flash(view: GraphNode) -> void:
 	_stop_flash()
 
 	_flash_view = view
+	_orig_panel_override = _flash_view.get_theme_stylebox(&"panel") if _flash_view.has_theme_stylebox_override(&"panel") else null
+	_orig_panel_selected_override = _flash_view.get_theme_stylebox(&"panel_selected") if _flash_view.has_theme_stylebox_override(&"panel_selected") else null
+
 	_flash_overlay = Panel.new()
 	_flash_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash_overlay.z_index = 20
@@ -1303,8 +1310,16 @@ func _stop_flash() -> void:
 		_flash_overlay.queue_free()
 		_flash_overlay = null
 	if is_instance_valid(_flash_view):
-		_flash_view.remove_theme_stylebox_override(&"panel")
-		_flash_view.remove_theme_stylebox_override(&"panel_selected")
+		if _orig_panel_override != null:
+			_flash_view.add_theme_stylebox_override(&"panel", _orig_panel_override)
+		else:
+			_flash_view.remove_theme_stylebox_override(&"panel")
+		if _orig_panel_selected_override != null:
+			_flash_view.add_theme_stylebox_override(&"panel_selected", _orig_panel_selected_override)
+		else:
+			_flash_view.remove_theme_stylebox_override(&"panel_selected")
+	_orig_panel_override = null
+	_orig_panel_selected_override = null
 
 
 func _update_flash_geometry() -> void:
@@ -1336,7 +1351,7 @@ func _set_flash(amount: float) -> void:
 
 	# Also apply directly to the card's own styleboxes
 	for s_name: StringName in [&"panel", &"panel_selected"]:
-		var base: StyleBox = _flash_view.get_theme_stylebox(s_name)
+		var base: StyleBox = _orig_panel_override if (s_name == &"panel" and _orig_panel_override != null) else (_orig_panel_selected_override if (s_name == &"panel_selected" and _orig_panel_selected_override != null) else _flash_view.get_theme_stylebox(s_name))
 		if base is StyleBoxFlat:
 			var box: StyleBoxFlat = (base as StyleBoxFlat).duplicate()
 			box.border_color = red_col
