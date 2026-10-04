@@ -142,7 +142,24 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 			key_label.theme_type_variation = "GraphNodeViewListLabel"
 			value_label.label_settings.font_color = Color(slot_color, LIST_LABEL_ALPHA)
 
-		container.add_child(key_label)
+		# how the card reads (russian-monologue): the title on a band of its own, each answer or
+		# branch on a plate of its own, «если:» in colour, the fallback row set apart
+		var is_item: bool = not row.sub_property_id.is_empty()
+		var own_prop: Property = node.get_property(row.get_connection_name())
+		var is_fallback: bool = idx > 0 and not is_item and node.has_method("numbered_rows") \
+			and row.get_connection_name() in (node.call("numbered_rows") as Array) \
+			and own_prop != null and own_prop.type != "collection"
+		var shown: Control = key_label
+		if is_item or is_fallback:
+			shown = _coloured_row_label(key_label, is_fallback)
+		if idx == 0:
+			container.draw.connect(_draw_title_band.bind(container, graph_node, tint))
+		elif is_item:
+			container.draw.connect(_draw_plate.bind(container))
+		elif is_fallback:
+			container.draw.connect(_draw_fallback_rule.bind(container))
+
+		container.add_child(shown)
 		container.add_child(value_label)
 		graph_node.add_child(container)
 
@@ -434,6 +451,88 @@ static func _build_list_sub_rows(node: InspectableNode, prop: Property) -> Array
 		sub_rows.append(sub_row)
 
 	return sub_rows
+
+
+## The colours of a card's rows (russian-monologue).
+const ROW_NUMBER_COLOUR: String = "#d0d0d0"
+const ROW_IF_COLOUR: String = "#d77a6a"
+const ROW_TEXT_COLOUR: Color = Color("#a8a8a8")
+const ROW_FALLBACK_COLOUR: Color = Color("#8c8c8c")
+
+
+## A row's words with its number brighter and «если:» in colour; wraps as the plain label did.
+static func _coloured_row_label(plain_label: Label, fallback: bool) -> RichTextLabel:
+	var text: String = plain_label.text
+	var number: String = ""
+	var cut: int = text.find(". ")
+	if cut > 0 and cut <= 3 and text.substr(0, cut).is_valid_int():
+		number = text.substr(0, cut + 1)
+		text = text.substr(cut + 2)
+	var words: String = NodePreview.plain(text)
+	for lead: String in ["если:", "иначе:"]:
+		if text.begins_with(lead):
+			words = "[color=%s]%s[/color]%s" % [ROW_IF_COLOUR, lead, NodePreview.plain(text.substr(lead.length()))]
+	if fallback:
+		words = "[i]%s[/i]" % words
+	var label: RichTextLabel = RichTextLabel.new()
+	label.bbcode_enabled = true
+	label.text = ("[color=%s]%s[/color] " % [ROW_NUMBER_COLOUR, number] if not number.is_empty() else "") + words
+	label.fit_content = true
+	label.scroll_active = false
+	label.mouse_filter = Control.MOUSE_FILTER_PASS
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	label.add_theme_color_override(&"default_color", ROW_FALLBACK_COLOUR if fallback else ROW_TEXT_COLOUR)
+	for size_name: StringName in [&"normal_font_size", &"italics_font_size"]:
+		label.add_theme_font_size_override(size_name, ThemeLayout.font_size_md)
+	if plain_label.autowrap_mode != TextServer.AUTOWRAP_OFF:
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.custom_minimum_size.x = plain_label.custom_minimum_size.x
+	else:
+		label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	plain_label.free()
+	return label
+
+
+## The card's panel in [param row]'s own coordinates: from the card's left edge to its right.
+static func _card_span(row: Control, graph_node: Control) -> Vector2:
+	return Vector2(-row.position.x, graph_node.size.x - row.position.x)
+
+
+## The title on a band of its own across the top of the card, a fine line under it; in the
+## card's colour, darker, when it has one.
+static func _draw_title_band(row: Control, graph_node: GraphNode, tint: Color) -> void:
+	var span: Vector2 = _card_span(row, graph_node)
+	var top: float = -row.position.y
+	var titlebar: Control = graph_node.get_titlebar_hbox()
+	if titlebar and titlebar.visible:
+		top += titlebar.size.y
+	var gap: float = float(graph_node.get_theme_constant(&"separation")) / 2.0
+	var band: StyleBoxFlat = StyleBoxFlat.new()
+	band.bg_color = Color(tint.darkened(0.55), 0.55) if tint.a > 0.0 else Color(0, 0, 0, 0.22)
+	band.corner_radius_top_left = ThemeLayout.radius_md - 1
+	band.corner_radius_top_right = ThemeLayout.radius_md - 1
+	var rect: Rect2 = Rect2(span.x + 1.0, top + 1.0, span.y - span.x - 2.0, row.size.y - top + gap)
+	row.draw_style_box(band, rect)
+	row.draw_line(Vector2(rect.position.x, rect.end.y), Vector2(rect.end.x, rect.end.y), Color(1, 1, 1, 0.07), 1.0)
+
+
+## Each answer or branch on a faint plate of its own, so where one ends and the next begins is
+## plain even when its words run onto three lines.
+static func _draw_plate(row: Control) -> void:
+	var plate: StyleBoxFlat = StyleBoxFlat.new()
+	plate.bg_color = Color(1, 1, 1, 0.045)
+	plate.set_corner_radius_all(5)
+	row.draw_style_box(plate, Rect2(-5.0, -1.0, row.size.x + 10.0, row.size.y + 2.0))
+
+
+## The fallback («иначе») is not one more branch: a dashed rule sets it apart above.
+static func _draw_fallback_rule(row: Control) -> void:
+	var y: float = -2.5
+	var x: float = -5.0
+	while x < row.size.x + 5.0:
+		row.draw_line(Vector2(x, y), Vector2(minf(x + 4.0, row.size.x + 5.0), y), Color(1, 1, 1, 0.16), 1.0)
+		x += 7.0
 
 
 ## Cuts a list item's name down to what a node has room for, since the name is written
