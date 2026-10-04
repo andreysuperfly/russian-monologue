@@ -161,8 +161,11 @@ func _under(directory: String) -> Dictionary:
 
 func _read_archive() -> void:
 	var archive: ZIPReader = ZIPReader.new()
-	if archive.open(path) != OK:
-		_cannot_open(&"unreadable_story", "Could not open '%s'." % path)
+	var err: Error = archive.open(path)
+	if err != OK:
+		var fa = FileAccess.open(path, FileAccess.READ)
+		var fa_err = FileAccess.get_open_error()
+		_cannot_open(&"unreadable_story", "Could not open '%s' (zip_err=%d: %s, file_err=%d: %s)." % [path, err, error_string(err), fa_err, error_string(fa_err)])
 		return
 
 	for entry_path: String in archive.get_files():
