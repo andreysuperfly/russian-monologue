@@ -160,6 +160,10 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 			container.draw.connect(_draw_fallback_rule.bind(container))
 
 		container.add_child(shown)
+		# a small «→» on a wired answer or branch: goes to the card it leads to, however far
+		# (russian-monologue)
+		if (is_item or is_fallback) and _row_has_wire(row, node):
+			container.add_child(_go_button(node, row.get_connection_name()))
 		container.add_child(value_label)
 		graph_node.add_child(container)
 
@@ -451,6 +455,36 @@ static func _build_list_sub_rows(node: InspectableNode, prop: Property) -> Array
 		sub_rows.append(sub_row)
 
 	return sub_rows
+
+
+## «→»: brings the card that [param from_name] on [param node] is wired to into view and
+## flashes it; ← in the top bar comes back.
+static func _go_button(node: InspectableNode, from_name: String) -> Button:
+	var go: Button = Button.new()
+	go.text = "→"
+	go.flat = true
+	go.focus_mode = Control.FOCUS_NONE
+	go.mouse_filter = Control.MOUSE_FILTER_STOP
+	go.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	go.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	go.custom_minimum_size = Vector2(20, 18)
+	go.tooltip_text = TranslationServer.translate("Go to the card this leads to")
+	go.add_theme_font_size_override(&"font_size", 13)
+	go.add_theme_color_override(&"font_color", Color(1, 1, 1, 0.35))
+	go.add_theme_color_override(&"font_hover_color", Color(ROW_IF_COLOUR))
+	go.pressed.connect(func() -> void:
+		var view: GraphNode = node.graph_view
+		var graph: MonologueGraphEdit = view.get_parent() as MonologueGraphEdit if is_instance_valid(view) else null
+		var storyline: StorylineDocument = ProjectManager.current_project.get_storyline(node.storyline_id) if ProjectManager.current_project else null
+		if graph == null or storyline == null:
+			return
+		for connection: NodeConnection in storyline.connections:
+			if connection.from_node_id == node.get_id() and connection.get_from_name() == from_name:
+				var target: InspectableNode = storyline.get_node(connection.to_node_id)
+				if target and is_instance_valid(target.graph_view):
+					graph.go_to(target.graph_view)
+				return)
+	return go
 
 
 ## The colours of a card's rows (russian-monologue).
