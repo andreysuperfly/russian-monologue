@@ -278,7 +278,31 @@ static func _build_rows(node: InspectableNode) -> Array[GraphNodeRow]:
 				if not is_compact or _row_has_wire(sub_row, node):
 					rows.append(sub_row)
 
+	_number_rows(rows, node)
 	return rows
+
+
+## Rows that are tried or offered in order get their place written in front: a choice's answers
+## as the player sees them, 1. 2. 3., a fork's branches in the order they are tried, «иначе»
+## last (russian-monologue). A node lists the properties to number with [code]numbered_rows()[/code].
+static func _number_rows(rows: Array[GraphNodeRow], node: InspectableNode) -> void:
+	var numbered: Array = ["choices"] if node.get_type() == "choice" else []
+	if node.has_method("numbered_rows"):
+		numbered = node.call("numbered_rows")
+	if numbered.is_empty():
+		return
+	var number: int = 0
+	for row: GraphNodeRow in rows:
+		var is_item: bool = not row.sub_property_id.is_empty()
+		var name: String = row.sub_property_id.get_slice(NodeConnection.ITEM_SEPARATOR, 0) if is_item else row.get_connection_name()
+		if not name in numbered:
+			continue
+		var prop: Property = node.get_property(name)
+		# a list's own heading row is not one of its items
+		if not is_item and prop != null and prop.type == "collection":
+			continue
+		number += 1
+		row._key = "%d. %s" % [number, row._key.strip_edges()]
 
 
 static func _row_has_wire(row: GraphNodeRow, node: InspectableNode) -> bool:
@@ -348,9 +372,6 @@ static func _build_list_sub_rows(node: InspectableNode, prop: Property) -> Array
 
 	var indexer: CollectionIndexer = MonologueRegistry.get_instance().get_collection(coll_name)
 	var label_property: String = indexer.label_property if indexer else "name"
-	# a choice's answers are numbered as the player sees them in the game: 1, 2, 3 (russian-monologue)
-	var numbered: bool = node.get_type() == "choice" and prop.name == "choices"
-	var number: int = 0
 
 	# Internal items from the property value
 	var list_value: Variant = prop.get_value()
@@ -365,9 +386,6 @@ static func _build_list_sub_rows(node: InspectableNode, prop: Property) -> Array
 			var sub_label: String = "  %s" % _shorten(
 				_item_label(item_data, label_property, probe.get_type(), item_index)
 			)
-			if numbered:
-				number += 1
-				sub_label = "  %d. %s" % [number, sub_label.strip_edges(true, false)]
 			var sub_row: GraphNodeRow = GraphNodeRow.new(sub_label, "context", false, true)
 			sub_row.sub_property_id = "%s%s%s" % [
 				prop.name, NodeConnection.ITEM_SEPARATOR, item_id
@@ -387,9 +405,6 @@ static func _build_list_sub_rows(node: InspectableNode, prop: Property) -> Array
 			var held: int = (prop.get_value() as Array).size() if prop.get_value() is Array else 0
 			ext_name = "%s %d" % [tr_type(probe.get_type()), held + ext_index + 1]
 		var sub_label: String = "  %s" % _shorten(ext_name)
-		if numbered:
-			number += 1
-			sub_label = "  %d. %s" % [number, _shorten(ext_name)]
 		var sub_row: GraphNodeRow = GraphNodeRow.new(sub_label, "context", false, true)
 		sub_row.sub_property_id = "%s%s%s%s" % [
 			prop.name, NodeConnection.ITEM_SEPARATOR, NodeConnection.EXTERNAL_PREFIX, ext_src_id
