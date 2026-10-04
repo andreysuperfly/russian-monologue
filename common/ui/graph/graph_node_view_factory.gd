@@ -203,6 +203,14 @@ static func _add_preview(graph_node: GraphNode, node: InspectableNode) -> void:
 	var panel: PanelContainer = PanelContainer.new()
 	panel.name = PREVIEW_NAME
 	panel.theme_type_variation = "GraphNodeViewPreviewPanel"
+	# a line is written on the card itself; every other kind of step shows its box in a dark tone
+	# of its own, so it reads at a glance as «not a line» and as which step it is (russian-monologue)
+	if node.get_type() != "sentence":
+		var box: StyleBox = panel.get_theme_stylebox(&"panel", &"GraphNodeViewPreviewPanel")
+		if box is StyleBoxFlat:
+			var tinted: StyleBoxFlat = box.duplicate()
+			tinted.bg_color = preview_tone(node.get_type())
+			panel.add_theme_stylebox_override(&"panel", tinted)
 	panel.mouse_filter = Control.MOUSE_FILTER_PASS
 
 	# A plain Control rather than a container: it does not grow to hold what is inside it,
@@ -497,3 +505,18 @@ static func readable_fill(tint: Color, base: Color) -> Color:
 		fill = fill.darkened(0.08)
 	fill.a = 1.0
 	return fill
+
+
+## Hues for kinds of step that are not lines; any other kind gets one from its name.
+const PREVIEW_HUES: Dictionary = {
+	"genius_code": 0.75, "action": 0.75, "event": 0.75,
+	"variable": 0.47, "inventory": 0.08,
+	"genius_scene": 0.6, "genius_fork": 0.11, "condition": 0.11,
+	"genius_after": 0.33, "genius_phase": 0.9,
+}
+
+
+## The dark tone a kind of step's box is shown in: its hue, kept dark enough for light text.
+static func preview_tone(type_name: String) -> Color:
+	var hue: float = float(PREVIEW_HUES[type_name]) if PREVIEW_HUES.has(type_name) else fmod(absf(float(type_name.hash())) / 1000.0, 1.0)
+	return Color.from_hsv(hue, 0.42, 0.2)
