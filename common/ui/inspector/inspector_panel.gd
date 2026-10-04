@@ -30,19 +30,34 @@ func _ready() -> void:
 	back_button.pressed.connect(_on_back_button_pressed)
 	visible = ConfigManager.get_config("show_inspector")
 	_add_close_button()
+	add_to_group(&"inspector_panel")
 
 
 ## × in the corner (russian-monologue): puts the panel away until something else is picked.
 func _add_close_button() -> void:
-	var close: Button = Button.new()
-	close.text = "✕"
-	close.flat = true
-	close.tooltip_text = tr("Close")
-	close.focus_mode = Control.FOCUS_NONE
-	close.pressed.connect(func() -> void:
-		_closed_on = current_objects.duplicate()
-		hide())
-	back_button.get_parent().add_child(close)
+	var close_button: Button = Button.new()
+	close_button.text = "✕"
+	close_button.flat = true
+	close_button.tooltip_text = tr("Close")
+	close_button.focus_mode = Control.FOCUS_NONE
+	close_button.pressed.connect(close)
+	back_button.get_parent().add_child(close_button)
+
+
+## Puts the panel away, as × does, until something else is picked.
+func close() -> void:
+	_closed_on = current_objects.duplicate()
+	hide()
+
+
+## A double click on a card (russian-monologue): opens its fields, or, when they are already
+## open for that card, puts them away.
+func toggle(objects: Array[InspectableObject]) -> void:
+	if visible and current_objects == objects:
+		close()
+	else:
+		_closed_on = []
+		inspect(objects)
 
 
 func _on_project_loaded() -> void:

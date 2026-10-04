@@ -188,7 +188,12 @@ func _on_card_input(event: InputEvent, graph_node: GraphNode, node: InspectableN
 		CardTextEditor.open.call_deferred(graph_node, node)
 		return
 	var selection: Array[InspectableObject] = [node]
-	EventBus.request_objects_inspection.emit.call_deferred(selection)
+	# the same double click puts the fields away again (russian-monologue)
+	var panel: Node = get_tree().get_first_node_in_group(&"inspector_panel")
+	if panel:
+		panel.toggle.call_deferred(selection)
+	else:
+		EventBus.request_objects_inspection.emit.call_deferred(selection)
 
 
 func _on_inspectable_node_property_changed(property_name: String, node: InspectableNode) -> void:
@@ -671,6 +676,13 @@ func _on_graph_gui_input(event: InputEvent) -> void:
 		return
 
 	var wire: NodeConnection = wire_at(click.position)
+	# a double click on empty canvas puts the fields panel away (russian-monologue)
+	if click.double_click and wire == null:
+		var panel: Node = get_tree().get_first_node_in_group(&"inspector_panel")
+		if panel and panel.visible:
+			panel.close()
+			accept_event()
+			return
 	if wire == null:
 		select_wires([])
 		return
