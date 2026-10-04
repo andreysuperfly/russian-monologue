@@ -17,6 +17,7 @@ var _warnings_pill: Label
 var _problems_container: VBoxContainer
 var _usage_search: LineEdit
 var _usage_target: OptionButton
+var _usage_filter: OptionButton
 var _usages_container: VBoxContainer
 var _all_usage_targets: Array[Dictionary] = []
 var _path_target: OptionButton
@@ -106,6 +107,14 @@ func _init() -> void:
 	_usage_target = OptionButton.new()
 	_usage_target.item_selected.connect(func(_i: int) -> void: _fill_usages())
 	usages_page.add_child(_usage_target)
+
+	# which places: all, those that give or take it, those that need or check it (russian-monologue)
+	_usage_filter = OptionButton.new()
+	_usage_filter.add_item(tr("All places"))
+	_usage_filter.add_item(tr("Where it is given or taken away"))
+	_usage_filter.add_item(tr("Where it is needed or checked"))
+	_usage_filter.item_selected.connect(func(_i: int) -> void: _fill_usages())
+	usages_page.add_child(_usage_filter)
 
 	var usages_scroll: ScrollContainer = ScrollContainer.new()
 	usages_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -416,14 +425,15 @@ func _fill_usages() -> void:
 	for site: ReferenceSite in project.get_object_registry().get_referrers(target):
 		var found: Array = _find_node(project, site.owner_id)
 		if found.is_empty():
-			entries.append({"group": tr("Collections"), "kind": "", "said": _where(project, site.owner_id, site.document_name), "what": tr(site.property_name), "jump": site.owner_id})
+			entries.append({"group": tr("Collections"), "kind": "", "said": _where(project, site.owner_id, site.document_name), "what": tr(site.property_name), "jump": site.owner_id, "change": false, "check": false})
 			continue
 		var node: InspectableNode = found[1]
 		var what: String = tr(site.property_name)
 		if node.get_type() == "condition":
 			what = tr("the story goes on one way if this is so, another if not")
 		entries.append({"group": (found[0] as StorylineDocument).name, "kind": _kind(project, node, site.owner_id),
-			"said": _said(project, node, site.owner_id), "what": what, "jump": node.get_id()})
+			"said": _said(project, node, site.owner_id), "what": what, "jump": node.get_id(),
+			"change": node.get_type() in WRITERS, "check": not node.get_type() in WRITERS})
 	entries.append_array(_addon_entries(project, target))
 	# one card per place: what an answer needs and what it gives go on the same card, and the
 	# same thing told twice (an option seen inside its choice and on its own) once
@@ -437,6 +447,14 @@ func _fill_usages() -> void:
 			unique.append(entry)
 		elif not entry["what"] in seen[key]["whats"]:
 			seen[key]["whats"].append(entry["what"])
+		seen[key]["change"] = seen[key]["change"] or entry["change"]
+		seen[key]["check"] = seen[key]["check"] or entry["check"]
+	# only where it is given or taken, or only where it is needed or checked
+	match _usage_filter.selected if _usage_filter else 0:
+		1:
+			unique.assign(unique.filter(func(e: Dictionary) -> bool: return e["change"]))
+		2:
+			unique.assign(unique.filter(func(e: Dictionary) -> bool: return e["check"]))
 	if unique.is_empty():
 		_show_empty_usages(tr("Not used anywhere."))
 		return
@@ -729,7 +747,8 @@ func _addon_entries(project: MonologueProject, target: String) -> Array[Dictiona
 				var at: String = option if not option.is_empty() else object_id
 				found.append({"group": storyline.name, "kind": _kind(project, node, at),
 					"said": NodePreview.trim(said, 400) if not said.is_empty() else _said(project, node, at),
-					"what": str(place.get("what", "")), "jump": node.get_id()})
+					"what": str(place.get("what", "")), "jump": node.get_id(),
+					"change": not place.get("reads", false), "check": place.get("reads", false)})
 			if not places.is_empty():
 				continue
 			# an add-on that does not say it in words: what it reads and writes
@@ -738,7 +757,8 @@ func _addon_entries(project: MonologueProject, target: String) -> Array[Dictiona
 				if str(target) in (report.get(kind, []) as Array).map(func(x: Variant) -> String: return str(x)):
 					found.append({"group": storyline.name, "kind": _kind(project, node, object_id),
 						"said": _said(project, node, object_id),
-						"what": tr("needs or checks" if kind == "reads" else "changes"), "jump": node.get_id()})
+						"what": tr("needs or checks" if kind == "reads" else "changes"), "jump": node.get_id(),
+						"change": kind == "writes", "check": kind == "reads"})
 	for storyline: StorylineDocument in project.storylines:
 		for node: InspectableNode in storyline.nodes:
 			look.call(storyline, node, node)
