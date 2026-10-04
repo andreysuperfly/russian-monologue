@@ -12,6 +12,16 @@ var mouse_hovering: bool = false
 
 var _wire_thickness: float = 0.0
 var _wire_zoom: float = -1.0
+var _lane_offsets: Dictionary = {}  # key String -> float (lane offset in view px)
+
+## When enabled, parallel wires in the same vertical corridor are routed in separate parallel
+## lanes instead of merging into a single overlapping line (russian-monologue).
+var separate_wire_lanes: bool = true:
+	set(value):
+		if separate_wire_lanes != value:
+			separate_wire_lanes = value
+			_update_lane_offsets()
+			queue_redraw()
 
 
 func _ready() -> void:
@@ -91,7 +101,7 @@ func _get_connection_line(from_position: Vector2, to_position: Vector2) -> Packe
 	# backwards takes the detour — a short forward one used to loop on itself
 	var step: float = 24.0 * zoom
 	if to_position.x > from_position.x + 2.0:
-		var mid_x: float = (from_position.x + to_position.x) * 0.5
+		var mid_x: float = _get_wire_mid_x(from_position, to_position)
 		raw_points = [
 			from_position,
 			Vector2(mid_x, from_position.y),
@@ -161,6 +171,99 @@ func _get_connection_line(from_position: Vector2, to_position: Vector2) -> Packe
 	return result
 
 
+func _get_wire_mid_x(from_position: Vector2, to_position: Vector2) -> float:
+	var base_mid: float = (from_position.x + to_position.x) * 0.5
+	if not separate_wire_lanes:
+		return base_mid
+	var key: String = "%d,%d>%d,%d" % [roundi(from_position.x), roundi(from_position.y), roundi(to_position.x), roundi(to_position.y)]
+	var offset: Variant = _lane_offsets.get(key)
+	if offset != null:
+		return base_mid + float(offset)
+	# fallback: match by close coordinates (within 2px)
+	for k: String in _lane_offsets:
+		var parts: PackedStringArray = k.split(">")
+		if parts.size() != 2:
+			continue
+		var p1_s: PackedStringArray = parts[0].split(",")
+		var p2_s: PackedStringArray = parts[1].split(",")
+		if p1_s.size() == 2 and p2_s.size() == 2:
+			if absf(float(p1_s[0]) - from_position.x) <= 2.0 and absf(float(p1_s[1]) - from_position.y) <= 2.0 \
+					and absf(float(p2_s[0]) - to_position.x) <= 2.0 and absf(float(p2_s[1]) - to_position.y) <= 2.0:
+				return base_mid + float(_lane_offsets[k])
+	return base_mid
+
+
+## Recalculates parallel lane offsets so overlapping vertical wires in the same corridor
+## do not merge into a single line (russian-monologue).
+func _update_lane_offsets() -> void:
+	_lane_offsets.clear()
+	if not separate_wire_lanes:
+		return
+	var conns: Array[Dictionary] = get_connection_list()
+	if conns.is_empty():
+		return
+	# Group wires into corridors between columns
+	var corridors: Dictionary = {}
+	for c: Dictionary in conns:
+		var fn: GraphNode = get_node_or_null(str(c.from_node)) as GraphNode
+		var tn: GraphNode = get_node_or_null(str(c.to_node)) as GraphNode
+		if fn == null or tn == null:
+			continue
+		var p1: Vector2 = (fn.position_offset + fn.get_output_port_position(c.from_port)) * zoom - scroll_offset
+		var p2: Vector2 = (tn.position_offset + tn.get_input_port_position(c.to_port)) * zoom - scroll_offset
+		# Only forward wires with vertical travel
+		if p2.x <= p1.x + 2.0 or absf(p2.y - p1.y) <= 4.0 * zoom:
+			continue
+		var key: String = "%d_%d_%d" % [roundi(p1.x / (30.0 * zoom)), roundi(p2.x / (30.0 * zoom)), 1 if p2.y > p1.y else -1]
+		(corridors.get_or_add(key, []) as Array).append({
+			"p1": p1,
+			"p2": p2,
+			"y_min": minf(p1.y, p2.y),
+			"y_max": maxf(p1.y, p2.y),
+			"dist": absf(p2.y - p1.y),
+		})
+
+	for corr_key: String in corridors:
+		var wires: Array = corridors[corr_key]
+		# Find connected clusters of wires whose vertical ranges overlap
+		var clusters: Array = []
+		for w: Dictionary in wires:
+			var merged_into: Array = []
+			for cl: Array in clusters:
+				var overlaps: bool = false
+				for other: Dictionary in cl:
+					if w.y_max > other.y_min + 4.0 * zoom and other.y_max > w.y_min + 4.0 * zoom:
+						overlaps = true
+						break
+				if overlaps:
+					merged_into.append(cl)
+			if merged_into.is_empty():
+				clusters.append([w])
+			else:
+				var target_cl: Array = merged_into[0]
+				target_cl.append(w)
+				for k: int in range(1, merged_into.size()):
+					target_cl.append_array(merged_into[k])
+					clusters.erase(merged_into[k])
+
+		for cl: Array in clusters:
+			if cl.size() <= 1:
+				continue
+			# Closest target peels off first -> needs largest X (outer lane, closest to target)
+			# Furthest target peels off last -> needs smallest X (inner lane, closest to source)
+			cl.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.dist < b.dist)
+			var K: int = cl.size()
+			var p1_s: Vector2 = cl[0].p1
+			var p2_s: Vector2 = cl[0].p2
+			var avail: float = maxf(12.0 * zoom, (p2_s.x - p1_s.x) - 36.0 * zoom)
+			var step_x: float = clampf(avail / float(K), 8.0 * zoom, 22.0 * zoom)
+			for i: int in K:
+				var item: Dictionary = cl[i]
+				var offset: float = ((float(K - 1) * 0.5) - float(i)) * step_x
+				var conn_key: String = "%d,%d>%d,%d" % [roundi(item.p1.x), roundi(item.p1.y), roundi(item.p2.x), roundi(item.p2.y)]
+				_lane_offsets[conn_key] = offset
+
+
 static func _append_wire_point(arr: PackedVector2Array, pt: Vector2) -> void:
 	if arr.is_empty() or not arr[arr.size() - 1].is_equal_approx(pt):
 		arr.append(pt)
@@ -169,6 +272,7 @@ static func _append_wire_point(arr: PackedVector2Array, pt: Vector2) -> void:
 ## Wires thin out with the zoom like everything else; Godot keeps their width in screen pixels,
 ## so zoomed out they used to look fat (russian-monologue).
 func _process(_delta: float) -> void:
+	_update_lane_offsets()
 	if is_equal_approx(zoom, _wire_zoom):
 		return
 	_wire_zoom = zoom

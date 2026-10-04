@@ -10,10 +10,29 @@ func _build_menu() -> void:
 		true,
 		["mnl_graph_show_grid"]
 	)
+	add_check_row(
+		"Separate Parallel Wires",
+		_is_separate_wires_enabled(),
+		_on_toggle_separate_wires,
+		true
+	)
 	# lay the cards out in story order (russian-monologue)
 	add_separator()
 	add_row("Lay Out Tight", func() -> void: _lay_out(false))
 	add_row("Lay Out Roomy", func() -> void: _lay_out(true))
+
+
+func _is_separate_wires_enabled() -> bool:
+	var graph: Node = get_tree().get_first_node_in_group(&"monologue_graph")
+	if graph and "separate_wire_lanes" in graph:
+		return graph.separate_wire_lanes
+	return true
+
+
+func _on_toggle_separate_wires(enabled: bool) -> void:
+	var graph: Node = get_tree().get_first_node_in_group(&"monologue_graph")
+	if graph and "separate_wire_lanes" in graph:
+		graph.separate_wire_lanes = enabled
 
 
 func _lay_out(roomy: bool) -> void:
