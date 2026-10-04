@@ -66,6 +66,13 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 				graph_node.add_theme_stylebox_override(style_name, tinted)
 
 	var rows: Array[GraphNodeRow] = _build_rows(node)
+	# the rows under the title sit on one inset panel of a slightly darker tone, fine lines
+	# between them (russian-monologue)
+	var body_rows: Array[Control] = []
+	if not graph_node.has_meta(&"body_hooked"):
+		graph_node.set_meta(&"body_hooked", true)
+		graph_node.draw.connect(_draw_body.bind(graph_node))
+	graph_node.set_meta(&"body_rows", body_rows)
 	for idx: int in rows.size():
 		var row: GraphNodeRow = rows[idx]
 		var container: HBoxContainer = HBoxContainer.new()
@@ -152,12 +159,8 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 		var shown: Control = key_label
 		if is_item or is_fallback:
 			shown = _coloured_row_label(key_label, is_fallback)
-		# the title is told apart by one fine line under it, nothing more: hierarchy by type and
-		# colour, not by boxes (russian-monologue)
-		if idx == 0 and rows.size() > 1:
-			container.draw.connect(_draw_title_rule.bind(container, graph_node))
-		if idx == 0 and tint.a <= 0.0 and type_hue(node.get_type()).a > 0.0:
-			container.draw.connect(_draw_type_strip.bind(container, graph_node, type_hue(node.get_type())))
+		if idx > 0:
+			body_rows.append(container)
 
 		container.add_child(shown)
 		# a small «→» on a wired answer or branch: goes to the card it leads to, however far
@@ -203,6 +206,14 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 		graph_node.set_slot_custom_icon_right(idx, SLOT_OUT_TEXTURE)
 
 	_add_preview(graph_node, node)
+
+	# room under the rows' panel, so it does not touch the card's bottom edge
+	# (a spacer with no port, after the rows, so the ports keep their indices)
+	if not body_rows.is_empty() and graph_node.get_node_or_null(NodePath(PREVIEW_NAME)) == null:
+		var room: Control = Control.new()
+		room.custom_minimum_size.y = 1.0
+		room.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		graph_node.add_child(room)
 
 	# reset_size() shrinks to the minimum size directly. set_size(Vector2.ZERO) got
 	# there too, but left the node at zero until the next layout pass, and any port
@@ -512,10 +523,12 @@ static func _coloured_row_label(plain_label: Label, fallback: bool) -> RichTextL
 	if cut > 0 and cut <= 3 and text.substr(0, cut).is_valid_int():
 		number = text.substr(0, cut + 1)
 		text = text.substr(cut + 2)
+	# a branch is its test alone: the panel already says these are conditions (russian-monologue)
+	if text.begins_with("если: "):
+		text = text.substr(6)
 	var words: String = NodePreview.plain(text)
-	for lead: String in ["если:", "иначе:"]:
-		if text.begins_with(lead):
-			words = "[color=%s]%s[/color]%s" % [ROW_IF_COLOUR, lead, NodePreview.plain(text.substr(lead.length()))]
+	if text.begins_with("иначе:"):
+		words = "[color=%s]иначе:[/color]%s" % [ROW_IF_COLOUR, NodePreview.plain(text.substr(6))]
 	if fallback:
 		words = "[i]%s[/i]" % words
 	var label: RichTextLabel = RichTextLabel.new()
@@ -538,19 +551,25 @@ static func _coloured_row_label(plain_label: Label, fallback: bool) -> RichTextL
 	return label
 
 
-## A fine line under the title, across the row, halfway into the gap below it.
-static func _draw_title_rule(row: Control, graph_node: GraphNode) -> void:
-	var y: float = row.size.y + float(graph_node.get_theme_constant(&"separation")) / 2.0
-	row.draw_line(Vector2(0, y), Vector2(row.size.x, y), Color(1, 1, 1, 0.08), 1.0)
-
-
-## What kind of step a card is, at a glance: a thin strip of its muted hue along the top edge,
-## as node editors colour a node's header by its kind. Lines have none: they are the story itself.
-static func _draw_type_strip(row: Control, graph_node: GraphNode, hue: Color) -> void:
-	var titlebar: Control = graph_node.get_titlebar_hbox()
-	var top: float = -row.position.y + (titlebar.size.y if titlebar else 0.0)
-	var inset: float = float(ThemeLayout.radius_md)
-	row.draw_rect(Rect2(-row.position.x + inset, top + 1.0, graph_node.size.x - inset * 2.0, 2.0), hue)
+## The inset panel the rows lie on, a little darker than the card, a fine line between rows.
+static func _draw_body(graph_node: GraphNode) -> void:
+	var rows: Array = graph_node.get_meta(&"body_rows", [])
+	var shown: Array = rows.filter(func(r: Variant) -> bool: return is_instance_valid(r) and (r as Control).visible)
+	if shown.is_empty():
+		return
+	var first: Control = shown[0]
+	var last: Control = shown[shown.size() - 1]
+	var pad: float = 4.0
+	var panel: Rect2 = Rect2(first.position.x - pad - 2.0, first.position.y - pad,
+		first.size.x + (pad + 2.0) * 2.0, last.position.y + last.size.y - first.position.y + pad * 2.0)
+	var box: StyleBoxFlat = StyleBoxFlat.new()
+	box.bg_color = Color(0, 0, 0, 0.2)
+	box.set_corner_radius_all(6)
+	graph_node.draw_style_box(box, panel)
+	for k: int in range(1, shown.size()):
+		var above: Control = shown[k - 1]
+		var y: float = roundf((above.position.y + above.size.y + (shown[k] as Control).position.y) / 2.0) + 0.5
+		graph_node.draw_line(Vector2(panel.position.x + 6.0, y), Vector2(panel.end.x - 6.0, y), Color(1, 1, 1, 0.06), 1.0)
 
 
 ## A kind's hue for the strip: the same hue its box is shown in, lighter and quieter.
