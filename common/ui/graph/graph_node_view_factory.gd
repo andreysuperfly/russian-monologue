@@ -341,6 +341,9 @@ static func _build_list_sub_rows(node: InspectableNode, prop: Property) -> Array
 
 	var indexer: CollectionIndexer = MonologueRegistry.get_instance().get_collection(coll_name)
 	var label_property: String = indexer.label_property if indexer else "name"
+	# a choice's answers are numbered as the player sees them in the game: 1, 2, 3 (russian-monologue)
+	var numbered: bool = node.get_type() == "choice" and prop.name == "choices"
+	var number: int = 0
 
 	# Internal items from the property value
 	var list_value: Variant = prop.get_value()
@@ -355,6 +358,9 @@ static func _build_list_sub_rows(node: InspectableNode, prop: Property) -> Array
 			var sub_label: String = "  %s" % _shorten(
 				_item_label(item_data, label_property, probe.get_type(), item_index)
 			)
+			if numbered:
+				number += 1
+				sub_label = "  %d. %s" % [number, sub_label.strip_edges(true, false)]
 			var sub_row: GraphNodeRow = GraphNodeRow.new(sub_label, "context", false, true)
 			sub_row.sub_property_id = "%s%s%s" % [
 				prop.name, NodeConnection.ITEM_SEPARATOR, item_id
@@ -374,6 +380,9 @@ static func _build_list_sub_rows(node: InspectableNode, prop: Property) -> Array
 			var held: int = (prop.get_value() as Array).size() if prop.get_value() is Array else 0
 			ext_name = "%s %d" % [tr_type(probe.get_type()), held + ext_index + 1]
 		var sub_label: String = "  %s" % _shorten(ext_name)
+		if numbered:
+			number += 1
+			sub_label = "  %d. %s" % [number, _shorten(ext_name)]
 		var sub_row: GraphNodeRow = GraphNodeRow.new(sub_label, "context", false, true)
 		sub_row.sub_property_id = "%s%s%s%s" % [
 			prop.name, NodeConnection.ITEM_SEPARATOR, NodeConnection.EXTERNAL_PREFIX, ext_src_id

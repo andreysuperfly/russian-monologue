@@ -1234,7 +1234,7 @@ func flash(view: GraphNode) -> void:
 	if _flash_tween:
 		_flash_tween.kill()
 	_flash_tween = create_tween()
-	_flash_tween.tween_method(_set_flash, 1.0, 0.0, 1.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	_flash_tween.tween_method(_set_flash, 1.0, 0.0, 1.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 
 
 func _set_flash(amount: float) -> void:
@@ -1245,17 +1245,18 @@ func _set_flash(amount: float) -> void:
 func _draw_flash() -> void:
 	if _flash_amount <= 0.0 or not is_instance_valid(_flash_view) or not _flash_view.visible:
 		return
-	# two quick pulses that fade out
-	var pulse: float = 0.55 + 0.45 * cos(_flash_amount * TAU * 2.0)
-	var alpha: float = clampf(_flash_amount * 1.6, 0.0, 1.0) * pulse
+	# two soft pulses that fade out, in the muted red of the ↩ links — a glow, not an alarm
+	var pulse: float = 0.6 + 0.4 * cos(_flash_amount * TAU * 2.0)
+	var alpha: float = clampf(_flash_amount * 1.4, 0.0, 1.0) * pulse
+	var tone: Color = Color("#d77a6a")
 	var glow: StyleBoxFlat = StyleBoxFlat.new()
 	glow.draw_center = false
-	glow.set_corner_radius_all(int(10 * zoom))
-	glow.set_border_width_all(maxi(2, int(3 * zoom)))
-	glow.border_color = Color(1.0, 0.25, 0.2, alpha)
-	glow.shadow_color = Color(1.0, 0.15, 0.1, 0.8 * alpha)
-	glow.shadow_size = int(28 * zoom)
-	var grow: float = 4.0 * zoom
+	glow.set_corner_radius_all(int(9 * zoom))
+	glow.set_border_width_all(maxi(1, int(1.5 * zoom)))
+	glow.border_color = Color(tone, 0.7 * alpha)
+	glow.shadow_color = Color(tone.darkened(0.15), 0.4 * alpha)
+	glow.shadow_size = int(12 * zoom)
+	var grow: float = 2.0 * zoom
 	draw_style_box(glow, Rect2(_flash_view.position, _flash_view.size * zoom).grow(grow))
 
 
