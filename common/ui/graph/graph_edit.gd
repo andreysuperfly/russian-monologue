@@ -1261,56 +1261,93 @@ var _flash_tween: Tween
 var _flash_overlay: Panel
 
 
+func _process(delta: float) -> void:
+	super._process(delta)
+	if _flash_amount > 0.0:
+		_update_flash_geometry()
+
+
 ## Flashes the card's exact outer border in crisp red when navigating to it (russian-monologue).
 func flash(view: GraphNode) -> void:
 	if not is_instance_valid(view):
 		return
-	if is_instance_valid(_flash_overlay):
-		_flash_overlay.queue_free()
-		_flash_overlay = null
-	if _flash_tween:
-		_flash_tween.kill()
+	_stop_flash()
 
 	_flash_view = view
 	_flash_overlay = Panel.new()
 	_flash_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_flash_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_flash_overlay.z_index = 20
 
 	var flash_style: StyleBoxFlat = StyleBoxFlat.new()
 	flash_style.draw_center = false
-	flash_style.set_corner_radius_all(6)
-	flash_style.set_border_width_all(2)
+	flash_style.set_corner_radius_all(int(6.0 * zoom))
+	flash_style.set_border_width_all(maxi(2, int(2.5 * zoom)))
 	flash_style.border_color = Color("#ff3b30", 1.0)
 	_flash_overlay.add_theme_stylebox_override("panel", flash_style)
 
-	view.add_child(_flash_overlay)
-	view.move_child(_flash_overlay, view.get_child_count() - 1)
+	add_child(_flash_overlay)
+	_update_flash_geometry()
 
 	_flash_amount = 1.0
 	_flash_tween = create_tween()
 	_flash_tween.tween_method(_set_flash, 1.0, 0.0, 1.2).set_trans(Tween.TRANS_LINEAR)
-	_flash_tween.finished.connect(func() -> void:
-		if is_instance_valid(_flash_overlay):
-			_flash_overlay.queue_free()
-			_flash_overlay = null
-	)
+	_flash_tween.finished.connect(_stop_flash)
+
+
+func _stop_flash() -> void:
+	_flash_amount = 0.0
+	if _flash_tween:
+		_flash_tween.kill()
+		_flash_tween = null
+	if is_instance_valid(_flash_overlay):
+		_flash_overlay.queue_free()
+		_flash_overlay = null
+	if is_instance_valid(_flash_view):
+		_flash_view.remove_theme_stylebox_override(&"panel")
+		_flash_view.remove_theme_stylebox_override(&"panel_selected")
+
+
+func _update_flash_geometry() -> void:
+	if not is_instance_valid(_flash_overlay) or not is_instance_valid(_flash_view) or not _flash_view.is_inside_tree():
+		return
+	_flash_overlay.position = _flash_view.position
+	_flash_overlay.size = _flash_view.size * zoom
+	_flash_overlay.visible = _flash_view.visible
+	var style: StyleBoxFlat = _flash_overlay.get_theme_stylebox("panel") as StyleBoxFlat
+	if style:
+		style.set_corner_radius_all(int(6.0 * zoom))
+		style.set_border_width_all(maxi(2, int(2.5 * zoom)))
 
 
 func _set_flash(amount: float) -> void:
 	_flash_amount = amount
-	if not is_instance_valid(_flash_overlay):
+	if not is_instance_valid(_flash_overlay) or not is_instance_valid(_flash_view):
 		return
+	_update_flash_geometry()
 	var style: StyleBoxFlat = _flash_overlay.get_theme_stylebox("panel") as StyleBoxFlat
 	if not style:
 		return
 	# 3 crisp flashes of the black outline in vivid red: starts ON, blinks cleanly, fades out
 	var wave: float = maxf(0.0, cos((1.0 - amount) * PI * 6.0))
 	var alpha: float = wave * clampf(amount * 1.5, 0.0, 1.0)
-	style.border_color = Color(1.0, 0.23, 0.19, alpha)
+	var red_col: Color = Color(1.0, 0.23, 0.19, alpha)
+	style.border_color = red_col
+	_flash_overlay.queue_redraw()
+
+	# Also apply directly to the card's own styleboxes
+	for s_name: StringName in [&"panel", &"panel_selected"]:
+		var base: StyleBox = _flash_view.get_theme_stylebox(s_name)
+		if base is StyleBoxFlat:
+			var box: StyleBoxFlat = (base as StyleBoxFlat).duplicate()
+			box.border_color = red_col
+			box.set_border_width_all(2)
+			_flash_view.add_theme_stylebox_override(s_name, box)
+	_flash_view.queue_redraw()
 
 
 func _draw_flash() -> void:
 	pass
+
 
 
 ## Brings [param node]'s card into view and flashes it, once its storyline is on the graph:
