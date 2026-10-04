@@ -152,18 +152,23 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 		var shown: Control = key_label
 		if is_item or is_fallback:
 			shown = _coloured_row_label(key_label, is_fallback)
-		if idx == 0:
-			container.draw.connect(_draw_title_band.bind(container, graph_node, tint))
-		elif is_item:
-			container.draw.connect(_draw_plate.bind(container))
-		elif is_fallback:
-			container.draw.connect(_draw_fallback_rule.bind(container))
+		# the title is told apart by one fine line under it, nothing more: hierarchy by type and
+		# colour, not by boxes (russian-monologue)
+		if idx == 0 and rows.size() > 1:
+			container.draw.connect(_draw_title_rule.bind(container, graph_node))
 
 		container.add_child(shown)
 		# a small «→» on a wired answer or branch: goes to the card it leads to, however far
 		# (russian-monologue)
 		if (is_item or is_fallback) and _row_has_wire(row, node):
-			container.add_child(_go_button(node, row.get_connection_name()))
+			var go: Button = _go_button(node, row.get_connection_name())
+			container.add_child(go)
+			# shown while the pointer is over its row: a clean card until you reach for it
+			go.modulate.a = 0.0
+			container.mouse_entered.connect(func() -> void: go.modulate.a = 1.0)
+			container.mouse_exited.connect(func() -> void:
+				if not Rect2(Vector2.ZERO, container.size).has_point(container.get_local_mouse_position()):
+					go.modulate.a = 0.0)
 		container.add_child(value_label)
 		graph_node.add_child(container)
 
@@ -528,45 +533,10 @@ static func _coloured_row_label(plain_label: Label, fallback: bool) -> RichTextL
 	return label
 
 
-## The card's panel in [param row]'s own coordinates: from the card's left edge to its right.
-static func _card_span(row: Control, graph_node: Control) -> Vector2:
-	return Vector2(-row.position.x, graph_node.size.x - row.position.x)
-
-
-## The title on a band of its own across the top of the card, a fine line under it; in the
-## card's colour, darker, when it has one.
-static func _draw_title_band(row: Control, graph_node: GraphNode, tint: Color) -> void:
-	var span: Vector2 = _card_span(row, graph_node)
-	var top: float = -row.position.y
-	var titlebar: Control = graph_node.get_titlebar_hbox()
-	if titlebar and titlebar.visible:
-		top += titlebar.size.y
-	var gap: float = float(graph_node.get_theme_constant(&"separation")) / 2.0
-	var band: StyleBoxFlat = StyleBoxFlat.new()
-	band.bg_color = Color(tint.darkened(0.55), 0.55) if tint.a > 0.0 else Color(0, 0, 0, 0.22)
-	band.corner_radius_top_left = ThemeLayout.radius_md - 1
-	band.corner_radius_top_right = ThemeLayout.radius_md - 1
-	var rect: Rect2 = Rect2(span.x + 1.0, top + 1.0, span.y - span.x - 2.0, row.size.y - top + gap)
-	row.draw_style_box(band, rect)
-	row.draw_line(Vector2(rect.position.x, rect.end.y), Vector2(rect.end.x, rect.end.y), Color(1, 1, 1, 0.07), 1.0)
-
-
-## Each answer or branch on a faint plate of its own, so where one ends and the next begins is
-## plain even when its words run onto three lines.
-static func _draw_plate(row: Control) -> void:
-	var plate: StyleBoxFlat = StyleBoxFlat.new()
-	plate.bg_color = Color(1, 1, 1, 0.045)
-	plate.set_corner_radius_all(5)
-	row.draw_style_box(plate, Rect2(-5.0, -1.0, row.size.x + 10.0, row.size.y + 2.0))
-
-
-## The fallback («иначе») is not one more branch: a dashed rule sets it apart above.
-static func _draw_fallback_rule(row: Control) -> void:
-	var y: float = -2.5
-	var x: float = -5.0
-	while x < row.size.x + 5.0:
-		row.draw_line(Vector2(x, y), Vector2(minf(x + 4.0, row.size.x + 5.0), y), Color(1, 1, 1, 0.16), 1.0)
-		x += 7.0
+## A fine line under the title, across the row, halfway into the gap below it.
+static func _draw_title_rule(row: Control, graph_node: GraphNode) -> void:
+	var y: float = row.size.y + float(graph_node.get_theme_constant(&"separation")) / 2.0
+	row.draw_line(Vector2(0, y), Vector2(row.size.x, y), Color(1, 1, 1, 0.08), 1.0)
 
 
 ## Cuts a list item's name down to what a node has room for, since the name is written
