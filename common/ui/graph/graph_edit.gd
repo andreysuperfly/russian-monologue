@@ -824,6 +824,18 @@ func _cut_wires(wires: Array[NodeConnection]) -> void:
 	refresh()
 
 
+## A right-click menu a size up from the theme's (russian-monologue): larger type, roomier rows,
+## and the same for every submenu in it.
+static func roomy_menu(menu: PopupMenu) -> void:
+	menu.add_theme_font_size_override(&"font_size", 16)
+	menu.add_theme_constant_override(&"v_separation", 12)
+	menu.add_theme_constant_override(&"item_start_padding", 14)
+	menu.add_theme_constant_override(&"item_end_padding", 18)
+	for child: Node in menu.get_children():
+		if child is PopupMenu:
+			roomy_menu(child as PopupMenu)
+
+
 ## Built each time and freed with the popup, since what it offers depends on the selection.
 func _offer_on_selection(at_position: Vector2, card: GraphNode = null) -> void:
 	var selection: Array[InspectableNode] = _user_owned(_selected_model_nodes())
@@ -837,7 +849,9 @@ func _offer_on_selection(at_position: Vector2, card: GraphNode = null) -> void:
 		for index: int in offers.size():
 			conditions.add_item(str(offers[index].get("text", "")), index)
 		conditions.id_pressed.connect(func(index: int) -> void:
-			CardTags.open_editor(card, under, offers[index].get("tag", {})))
+			get_tree().create_timer(0.08).timeout.connect(func() -> void:
+				if is_instance_valid(card):
+					CardTags.open_editor(card, under, offers[index].get("tag", {}))))
 		menu.add_child(conditions)
 		menu.add_submenu_node_item(tr("Add a condition"), conditions)
 	# and to each answer of a choice: «Условие ответа» › «1. Кто такой Пушкин?» › …
@@ -865,6 +879,7 @@ func _offer_on_selection(at_position: Vector2, card: GraphNode = null) -> void:
 		menu.id_pressed.connect(func(_offer: int) -> void: _add_node_from(card, at_position))
 		menu.popup_hide.connect(menu.queue_free)
 		add_child(menu)
+		roomy_menu(menu)
 		menu.position = Vector2i(get_screen_position() + at_position)
 		menu.popup()
 		return
@@ -898,6 +913,7 @@ func _offer_on_selection(at_position: Vector2, card: GraphNode = null) -> void:
 			_on_offer_chosen(offer, selection))
 	menu.popup_hide.connect(menu.queue_free)
 	add_child(menu)
+	roomy_menu(menu)
 
 	menu.position = Vector2i(get_screen_position() + at_position)
 	menu.popup()

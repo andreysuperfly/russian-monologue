@@ -166,7 +166,8 @@ static func _chip(text: String, colour: Color) -> Button:
 	return chip
 
 
-## A fine grey dashed edge around the tag itself, rounded like it: the straight sides in dashes, the round
+## A fine grey dashed edge around the tag itself, rounded like it, one screen pixel thin at any
+## zoom so it stays sharp (a 1-unit line grew blurry as the graph zoomed in): the straight sides in dashes, the round
 ## ends in short arcs with gaps.
 static func _draw_dashed_pill(chip: Control, colour: Color) -> void:
 	var r: Rect2 = Rect2(Vector2(0.5, 0.5), chip.size - Vector2.ONE)
@@ -174,8 +175,8 @@ static func _draw_dashed_pill(chip: Control, colour: Color) -> void:
 	var left: float = r.position.x + radius
 	var right: float = r.end.x - radius
 	if right > left:
-		chip.draw_dashed_line(Vector2(left, r.position.y), Vector2(right, r.position.y), colour, 1.0, 2.0, false)
-		chip.draw_dashed_line(Vector2(left, r.end.y), Vector2(right, r.end.y), colour, 1.0, 2.0, false)
+		chip.draw_dashed_line(Vector2(left, r.position.y), Vector2(right, r.position.y), colour, -1.0, 2.0, false)
+		chip.draw_dashed_line(Vector2(left, r.end.y), Vector2(right, r.end.y), colour, -1.0, 2.0, false)
 	var centre_y: float = r.position.y + radius
 	var steps: int = maxi(4, int(PI * radius / 2.0))
 	var piece: float = PI / steps
@@ -183,8 +184,8 @@ static func _draw_dashed_pill(chip: Control, colour: Color) -> void:
 		if i % 2 == 1:
 			continue
 		var a: float = PI * 0.5 + i * piece
-		chip.draw_arc(Vector2(left, centre_y), radius, a, a + piece, 4, colour, 1.0, true)
-		chip.draw_arc(Vector2(right, centre_y), radius, a + PI, a + PI + piece, 4, colour, 1.0, true)
+		chip.draw_arc(Vector2(left, centre_y), radius, a, a + piece, 4, colour, -1.0)
+		chip.draw_arc(Vector2(right, centre_y), radius, a + PI, a + PI + piece, 4, colour, -1.0)
 
 
 ## The conditions that can be added, as a menu; the chosen one opens its editor.
@@ -193,6 +194,7 @@ static func offer_menu(anchor: Control, node: InspectableNode, offers: Array) ->
 	fill_offer_menu(menu, anchor, node, offers)
 	menu.popup_hide.connect(menu.queue_free)
 	anchor.get_tree().root.add_child(menu)
+	MonologueGraphEdit.roomy_menu(menu)
 	menu.position = Vector2i(anchor.get_screen_position() + Vector2(0, anchor.get_global_rect().size.y + 4))
 	menu.popup()
 
@@ -200,7 +202,12 @@ static func offer_menu(anchor: Control, node: InspectableNode, offers: Array) ->
 static func fill_offer_menu(menu: PopupMenu, anchor: Control, node: InspectableNode, offers: Array) -> void:
 	for index: int in offers.size():
 		menu.add_item(str(offers[index].get("text", "")), index)
-	menu.id_pressed.connect(func(index: int) -> void: open_editor(anchor, node, offers[index].get("tag", {})))
+	# opened once the menu is gone: opened while it closes, the window went with it
+	menu.id_pressed.connect(func(index: int) -> void:
+		var tag: Dictionary = offers[index].get("tag", {})
+		anchor.get_tree().create_timer(0.08).timeout.connect(func() -> void:
+			if is_instance_valid(anchor):
+				open_editor(anchor, node, tag)))
 
 
 ## The value of [param key] now: on the node, or on its answer for a tag of one.
