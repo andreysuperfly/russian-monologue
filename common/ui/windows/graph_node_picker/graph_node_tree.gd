@@ -209,10 +209,10 @@ func _matches(query: String, item: TreeItem) -> bool:
 	return false
 
 
-## Clears the filter and folds the categories back, the state the picker opens in.
+## Clears the filter: every category open, the state the picker opens in (russian-monologue —
+## folded categories hid what could be added).
 func _show_all(item: TreeItem) -> void:
 	item.visible = true
-	if item != get_root():
-		item.collapsed = true
+	item.collapsed = false
 	for child: TreeItem in item.get_children():
 		_show_all(child)
