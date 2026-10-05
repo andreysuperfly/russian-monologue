@@ -33,7 +33,6 @@ func _ready() -> void:
 ## Bigger and brighter than the theme's default (russian-monologue): the list is read, not
 ## skimmed — larger type, the categories in full white, roomier rows, «Add» in the accent colour.
 func _make_readable() -> void:
-	size = Vector2i(540, 620)
 	min_size = Vector2i(420, 420)
 	search_bar.custom_minimum_size.y = 42
 	search_bar.add_theme_font_size_override(&"font_size", 17)
@@ -129,6 +128,10 @@ func open_for_node(
 		node_tree.reload_tree()
 
 	popup()
+	# the size in points, not pixels: on a retina screen 540 pixels came up as a small window
+	await get_tree().process_frame
+	oversampling_override = maxf(content_scale_factor, 1.0)
+	size = Vector2i(Vector2(540, 640) * maxf(content_scale_factor, 1.0))
 	move_to_center()
 
 	var root_window: Window = get_tree().get_root()

@@ -16,6 +16,9 @@ func _ready() -> void:
 func update_size() -> void:
 	if popup_window: # FIXME I'm not sure it's right test
 		App._update_window(self, false)
+	# text drawn at the window's real scale: left at 1, it was drawn small and blown up, and
+	# came out blurred on a retina screen (russian-monologue)
+	oversampling_override = maxf(content_scale_factor, 1.0)
 	size.x = size.x
 	_recenter()
 

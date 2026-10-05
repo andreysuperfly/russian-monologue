@@ -56,7 +56,7 @@ func reload_tree() -> void:
 		category_item.set_text(NAME_COLUMN, category)
 		category_item.set_selectable(NAME_COLUMN, false)
 		category_item.set_custom_color(NAME_COLUMN, ThemeLayout.text_primary_color)
-		category_item.collapsed = true
+		category_item.collapsed = false  # every kind of node in view at once (russian-monologue)
 		for indexer: MonologueIndexer in offered:
 			_create_indexer_item(category_item, indexer)
 
