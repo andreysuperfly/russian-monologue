@@ -874,6 +874,17 @@ func _let_go_of_pull() -> void:
 	select_wires([])
 	GraphChain._insert(self, storyline, node, _pull_wire)
 	refresh()
+	_pick_when_drawn.call_deferred(node)
+
+
+## The card that just went in, picked — red edge and red wires — so it is easy to see where it
+## landed; the graph redraws its cards first, so wait for its view.
+func _pick_when_drawn(node: InspectableNode) -> void:
+	for _i: int in 10:
+		if is_instance_valid(node.graph_view) and node.graph_view.is_inside_tree():
+			set_selected(node.graph_view)
+			return
+		await get_tree().process_frame
 
 
 func _end_pull() -> void:
