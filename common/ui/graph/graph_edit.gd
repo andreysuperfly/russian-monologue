@@ -1228,7 +1228,6 @@ var _arcs: Array = []
 
 func _draw() -> void:
 	_hook_back_wire_redraws()
-	_draw_flash()
 	_arcs.clear()
 	if _back_wires.is_empty():
 		return
@@ -1358,115 +1357,47 @@ func _glide_to(view: GraphNode) -> void:
 		0.0, 1.0, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
-## The card being flashed and its overlay panel.
-var _flash_view: GraphNode
-var _flash_amount: float = 0.0
-var _flash_tween: Tween
-var _flash_overlay: Panel
+## The card jumped to, marked in red like a selected card until the next click on the graph
+## elsewhere (russian-monologue). It used to blink; a steady mark is easier to find again.
+const MARK_RED: Color = Color("#d9534a")
+var _marked: GraphNode
 
 
-func _process(delta: float) -> void:
-	super._process(delta)
-	if _flash_amount > 0.0:
-		_update_flash_geometry()
-
-
-var _orig_panel_override: StyleBox
-var _orig_panel_selected_override: StyleBox
-
-
-## Flashes the card's exact outer border in crisp red when navigating to it (russian-monologue).
 func flash(view: GraphNode) -> void:
+	_unmark()
 	if not is_instance_valid(view):
 		return
-	_stop_flash()
-
-	_flash_view = view
-	_orig_panel_override = _flash_view.get_theme_stylebox(&"panel") if _flash_view.has_theme_stylebox_override(&"panel") else null
-	_orig_panel_selected_override = _flash_view.get_theme_stylebox(&"panel_selected") if _flash_view.has_theme_stylebox_override(&"panel_selected") else null
-
-	_flash_overlay = Panel.new()
-	_flash_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_flash_overlay.z_index = 20
-
-	var flash_style: StyleBoxFlat = StyleBoxFlat.new()
-	flash_style.draw_center = false
-	flash_style.set_corner_radius_all(int(6.0 * zoom))
-	flash_style.set_border_width_all(maxi(2, int(2.5 * zoom)))
-	flash_style.border_color = Color("#ff3b30", 1.0)
-	_flash_overlay.add_theme_stylebox_override("panel", flash_style)
-
-	add_child(_flash_overlay)
-	_update_flash_geometry()
-
-	_flash_amount = 1.0
-	_flash_tween = create_tween()
-	_flash_tween.tween_method(_set_flash, 1.0, 0.0, 1.2).set_trans(Tween.TRANS_LINEAR)
-	_flash_tween.finished.connect(_stop_flash)
-
-
-func _stop_flash() -> void:
-	_flash_amount = 0.0
-	if _flash_tween:
-		_flash_tween.kill()
-		_flash_tween = null
-	if is_instance_valid(_flash_overlay):
-		_flash_overlay.queue_free()
-		_flash_overlay = null
-	if is_instance_valid(_flash_view):
-		if _orig_panel_override != null:
-			_flash_view.add_theme_stylebox_override(&"panel", _orig_panel_override)
-		else:
-			_flash_view.remove_theme_stylebox_override(&"panel")
-		if _orig_panel_selected_override != null:
-			_flash_view.add_theme_stylebox_override(&"panel_selected", _orig_panel_selected_override)
-		else:
-			_flash_view.remove_theme_stylebox_override(&"panel_selected")
-	_orig_panel_override = null
-	_orig_panel_selected_override = null
-
-
-func _update_flash_geometry() -> void:
-	if not is_instance_valid(_flash_overlay) or not is_instance_valid(_flash_view) or not _flash_view.is_inside_tree():
-		return
-	_flash_overlay.position = _flash_view.position
-	_flash_overlay.size = _flash_view.size * zoom
-	_flash_overlay.visible = _flash_view.visible
-	var style: StyleBoxFlat = _flash_overlay.get_theme_stylebox("panel") as StyleBoxFlat
-	if style:
-		style.set_corner_radius_all(int(6.0 * zoom))
-		style.set_border_width_all(maxi(2, int(2.5 * zoom)))
-
-
-func _set_flash(amount: float) -> void:
-	_flash_amount = amount
-	if not is_instance_valid(_flash_overlay) or not is_instance_valid(_flash_view):
-		return
-	_update_flash_geometry()
-	var style: StyleBoxFlat = _flash_overlay.get_theme_stylebox("panel") as StyleBoxFlat
-	if not style:
-		return
-	# 3 crisp flashes of the black outline in vivid red: starts ON, blinks cleanly, fades out
-	var wave: float = maxf(0.0, cos((1.0 - amount) * PI * 6.0))
-	var alpha: float = wave * clampf(amount * 1.5, 0.0, 1.0)
-	var red_col: Color = Color(1.0, 0.23, 0.19, alpha)
-	style.border_color = red_col
-	_flash_overlay.queue_redraw()
-
-	# Also apply directly to the card's own styleboxes
-	for s_name: StringName in [&"panel", &"panel_selected"]:
-		var base: StyleBox = _orig_panel_override if (s_name == &"panel" and _orig_panel_override != null) else (_orig_panel_selected_override if (s_name == &"panel_selected" and _orig_panel_selected_override != null) else _flash_view.get_theme_stylebox(s_name))
+	_marked = view
+	for style_name: StringName in [&"panel", &"panel_selected"]:
+		var base: StyleBox = view.get_theme_stylebox(style_name)
 		if base is StyleBoxFlat:
 			var box: StyleBoxFlat = (base as StyleBoxFlat).duplicate()
-			box.border_color = red_col
+			box.border_color = MARK_RED
 			box.set_border_width_all(2)
-			_flash_view.add_theme_stylebox_override(s_name, box)
-	_flash_view.queue_redraw()
+			view.add_theme_stylebox_override(style_name, box)
+	view.set_meta(&"marked", true)
 
 
-func _draw_flash() -> void:
-	pass
+## Gives the card back its own edge: the tint it was given, or the theme's.
+func _unmark() -> void:
+	if is_instance_valid(_marked) and _marked.has_meta(&"marked"):
+		_marked.remove_meta(&"marked")
+		var node: InspectableNode = get_node_from_view_name(String(_marked.name))
+		if node:
+			refresh_node(node)
+	_marked = null
 
+
+## A click anywhere on the graph but the marked card takes the mark away.
+func _input(event: InputEvent) -> void:
+	var click: InputEventMouseButton = event as InputEventMouseButton
+	if click == null or not click.pressed or not is_instance_valid(_marked) or not is_visible_in_tree():
+		return
+	if not get_global_rect().has_point(click.global_position):
+		return
+	if _marked.get_global_rect().has_point(click.global_position):
+		return
+	_unmark.call_deferred()
 
 
 ## Brings [param node]'s card into view and flashes it, once its storyline is on the graph:
