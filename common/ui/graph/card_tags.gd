@@ -264,6 +264,13 @@ static func open_editor(anchor: Control, node: InspectableNode, tag: Dictionary)
 	var clear: Dictionary = tag.get("clear", {})
 	if fields.is_empty() and start.is_empty() and clear.is_empty():
 		return
+	# a second click on the same tag puts its window away: the click outside has just closed it,
+	# so it is not opened again (russian-monologue)
+	if anchor.has_meta(&"tag_editor_closed_at"):
+		var closed_at: int = int(anchor.get_meta(&"tag_editor_closed_at"))
+		anchor.remove_meta(&"tag_editor_closed_at")
+		if Time.get_ticks_msec() - closed_at < 300:
+			return
 	var popup: PopupPanel = PopupPanel.new()
 	var frame: StyleBoxFlat = StyleBoxFlat.new()
 	frame.bg_color = Color("#262626")
@@ -297,6 +304,7 @@ static func open_editor(anchor: Control, node: InspectableNode, tag: Dictionary)
 			var other: Dictionary = (others[index - 1].get("tag", {}) as Dictionary).duplicate(true)
 			other["replaces"] = tag.get("clear", {})
 			popup.hide()
+			anchor.remove_meta(&"tag_editor_closed_at")  # this one is a swap, not a second click
 			open_editor(anchor, node, other))
 		var kind_row: HBoxContainer = HBoxContainer.new()
 		kind_row.add_theme_constant_override(&"separation", 10)
@@ -384,7 +392,10 @@ static func open_editor(anchor: Control, node: InspectableNode, tag: Dictionary)
 	column.add_child(buttons)
 
 	popup.add_child(column)
-	popup.popup_hide.connect(popup.queue_free)
+	popup.popup_hide.connect(func() -> void:
+		if is_instance_valid(anchor):
+			anchor.set_meta(&"tag_editor_closed_at", Time.get_ticks_msec())
+		popup.queue_free())
 	anchor.get_tree().root.add_child(popup)
 	popup.popup(Rect2i(Vector2i(anchor.get_screen_position() + Vector2(0, anchor.get_global_rect().size.y + 4)), Vector2i.ZERO))
 	# a wrapped label first measures as a narrow column, tall as a tower: fit once it has its width
