@@ -109,5 +109,22 @@ func _on_ask_request(
 	confirm_button.text = confirm_text
 	deny_button.text = deny_text
 	cancel_button.text = cancel_text
+	# a button with no words is not offered (russian-monologue): «Delete / Cancel» is two buttons
+	deny_button.visible = not deny_text.is_empty()
+	cancel_button.visible = not cancel_text.is_empty()
 
 	show()
+	confirm_button.grab_focus.call_deferred()
+
+
+## Enter answers with the highlighted button, Esc cancels (russian-monologue).
+func _input(event: InputEvent) -> void:
+	var key: InputEventKey = event as InputEventKey
+	if not visible or key == null or not key.pressed or key.echo:
+		return
+	if key.keycode in [KEY_ENTER, KEY_KP_ENTER]:
+		set_input_as_handled()
+		_on_confirm_button_pressed()
+	elif key.keycode == KEY_ESCAPE:
+		set_input_as_handled()
+		_on_cancel_button_pressed()

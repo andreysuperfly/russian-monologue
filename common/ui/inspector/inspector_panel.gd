@@ -614,7 +614,7 @@ func _add_delete_all(inspected: Array[InspectableObject]) -> void:
 	button.flat = true
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.add_theme_color_override("font_color", Color("#e06c6c"))
-	button.pressed.connect(func() -> void: graph._on_delete_nodes_request(ids))
+	button.pressed.connect(func() -> void: graph.delete_cards(ids))
 	field_container.add_child(button)
 
 

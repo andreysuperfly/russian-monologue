@@ -1071,7 +1071,33 @@ func _on_cut_nodes_request() -> void:
 	storyline.history.execute(DeleteNodesCommand.new(storyline_id, nodes_to_delete))
 
 
+## Delete / Backspace on the graph (russian-monologue): ⌘ with it deletes at once, without it
+## asks first, and Enter says yes. Typing in a field never gets here: the field takes the key.
+func _unhandled_key_input(event: InputEvent) -> void:
+	var key: InputEventKey = event as InputEventKey
+	if key == null or not key.pressed or key.echo or not is_visible_in_tree():
+		return
+	if key.keycode not in [KEY_BACKSPACE, KEY_DELETE] or key.shift_pressed or key.alt_pressed:
+		return
+	var picked: Array[StringName] = []
+	for picked_node: InspectableObject in get_selected_nodes():
+		var card: Node = (picked_node as InspectableNode).graph_view if picked_node is InspectableNode else null
+		if is_instance_valid(card):
+			picked.append(StringName(card.name))
+	if picked.is_empty():
+		return
+	get_viewport().set_input_as_handled()
+	delete_cards(picked, not key.is_command_or_control_pressed())
+
+
+## GraphEdit's own Delete key lands here: the same rule, ⌘ or not.
 func _on_delete_nodes_request(graph_nodes: Array[StringName]) -> void:
+	delete_cards(graph_nodes, not Input.is_key_pressed(KEY_META) and not Input.is_key_pressed(KEY_CTRL))
+
+
+## [param ask]: «Delete N cards?» first, Enter confirming. A section going with them is
+## always named in the question.
+func delete_cards(graph_nodes: Array[StringName], ask: bool = false) -> void:
 	var nodes: Array[InspectableNode] = []
 	for node_name: StringName in graph_nodes:
 		var graph_node: GraphNode = get_node("%s" % node_name)
@@ -1086,14 +1112,19 @@ func _on_delete_nodes_request(graph_nodes: Array[StringName]) -> void:
 	# A section is a graph of its own, so losing one is worth a question. Anything else
 	# goes on the spot, undo being the answer to a delete one did not mean.
 	var going: Array[StorylineDocument] = DeleteNodesCommand.sections_run_by(removable)
-	if going.is_empty():
+	if not ask:
 		_delete_nodes(removable, going)
 		return
 
+	var question: String = TranslationServer.translate("Delete «%s»?") % NodePreview.trim(BranchCut.name_of(removable[0]), 60) \
+		if removable.size() == 1 else TranslationServer.translate("Delete %d cards?") % removable.size()
+	var why: String = TranslationServer.translate("Enter — delete, Esc — cancel. ⌘⌫ deletes without asking; ⌘Z brings it back.")
+	if not going.is_empty():
+		why = _what_goes_too(going) + "\n" + why
 	EventBus.ask_dialog.emit(
 		_on_delete_confirmed.bind(removable, going),
-		"Are you sure?",
-		_what_goes_too(going)
+		question, why,
+		TranslationServer.translate("Delete"), "", TranslationServer.translate("Cancel")
 	)
 
 

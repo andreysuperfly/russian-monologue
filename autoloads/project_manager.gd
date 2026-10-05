@@ -45,9 +45,59 @@ func _ready() -> void:
 	var watch: Timer = Timer.new()
 	watch.wait_time = 1.0
 	watch.timeout.connect(check_disk)
+	watch.timeout.connect(_check_own_build)
 	add_child(watch)
 	watch.start()
+	_build_print = _own_build_print()
 	get_window().focus_entered.connect(check_disk)
+
+
+# ---- the program's own files replaced while it runs (russian-monologue) ----
+## Godot reads windows and fields from its .pck as they are first needed, by position in the
+## file. A new build put in place under a running program makes those reads land in the wrong
+## spot: fields turn into «Unknown property type», windows fail to open. So when the .pck
+## changes, say so once and offer to save and restart.
+var _build_print: String = ""
+var _build_warned: bool = false
+
+
+static func _own_pack() -> String:
+	var pack: String = OS.get_executable_path().get_base_dir().path_join("../Resources/Godot.pck").simplify_path()
+	return pack if FileAccess.file_exists(pack) else ""
+
+
+static func _own_build_print() -> String:
+	var pack: String = _own_pack()
+	if pack.is_empty():
+		return ""
+	return "%d:%d" % [FileAccess.get_modified_time(pack), FileAccess.get_size(pack)]
+
+
+func _check_own_build() -> void:
+	if _build_warned or _build_print.is_empty() or _prompt_open():
+		return
+	if _own_build_print() == _build_print:
+		return
+	_build_warned = true
+	EventBus.ask_dialog.emit(
+		_on_build_replaced,
+		tr("Russian Monologue was updated"),
+		tr("A new version was installed while this one is open. Until a restart some windows and fields will not open. Your project is saved first; it opens again on its own."),
+		tr("Save and restart"), "", tr("Later")
+	)
+
+
+func _on_build_replaced(response: int) -> void:
+	if response != Prompt.CONFIRMED:
+		return
+	var path: String = current_project.project_path if current_project else ""
+	if current_project and current_project.is_dirty and not path.is_empty():
+		await current_project.save()
+		if current_project.is_dirty:
+			Log.error(tr("Not saved — restart by hand after saving."))
+			return
+	OS.set_restart_on_exit(true, PackedStringArray([path]) if not path.is_empty() else PackedStringArray())
+	get_tree().quit()
 
 
 func close_current_project() -> bool:

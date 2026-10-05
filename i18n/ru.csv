@@ -619,6 +619,13 @@ Delete «%s»?,Удалить «%s»?
 After it come %d card(s) nothing else leads to. Cards another way still reaches stay.,"После него идут карточки, в которые больше ничего не ведёт: %d. Карточки, куда ведёт и другой путь, останутся."
 What matters in that branch — click to look:,"Важное в этой ветке — кликните, чтобы посмотреть:"
 Only the answer,Только ответ
+Delete %d cards?,Удалить карточки: %d?
+"Enter — delete, Esc — cancel. ⌘⌫ deletes without asking; ⌘Z brings it back.","Enter — удалить, Esc — отмена. ⌘⌫ удаляет без вопроса, ⌘Z возвращает."
+Russian Monologue was updated,Russian Monologue обновлён
+A new version was installed while this one is open. Until a restart some windows and fields will not open. Your project is saved first; it opens again on its own.,"Новая версия установилась, пока эта открыта. До перезапуска часть окон и полей не откроется. Проект сначала сохранится и откроется сам."
+Save and restart,Сохранить и перезапустить
+Later,Позже
+Not saved — restart by hand after saving.,Не сохранилось — сохраните и перезапустите вручную.
 With the branch (%d),Вместе с веткой (%d)
 another check,ещё проверка
 Show the checks,Показать проверки

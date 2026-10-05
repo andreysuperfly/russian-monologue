@@ -56,6 +56,8 @@ static func name_of(node: InspectableNode) -> String:
 	if node.get_type() == "sentence":
 		var who: String = GraphNodeViewFactory._speaker_name(node)
 		var said: String = NodePreview.trim(Util.to_label(node.get_property_value("line")), 50)
+		if said.strip_edges().is_empty():  # a new, empty line: its kind, not «»
+			return who if not who.is_empty() else TranslationServer.translate("A line")
 		return ("%s: «%s»" % [who, said]) if not who.is_empty() else "«%s»" % said
 	if node.has_method("card_title"):
 		var own: String = str(node.call("card_title"))
