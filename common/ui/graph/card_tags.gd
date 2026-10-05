@@ -98,14 +98,53 @@ static func for_item(graph_node: GraphNode, node: InspectableNode, property: Str
 	var tags: Array = item_tags(node, property, item_id)
 	if tags.is_empty():
 		return null
-	# no «+» on every answer — a choice would fill up with them; a right click adds one
-	return flow(node, tags, [])
+	# in the answer's own line, on its right: the conditions as small marks, then what it gives
+	# as coloured words; no «+» on every answer — a right click adds one. A plain row, not a
+	# wrapping one: a wrapping row sized itself against the card and the card shook on hover.
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 4)
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var effects: Array = tags.filter(func(tag: Dictionary) -> bool: return tag.get("effect", false))
+	for tag: Dictionary in tags:
+		if not tag.get("effect", false):
+			row.add_child(_wired(_chip(str(tag.get("text", "")), tag.get("color", Color("#9a9a9a")), true), node, tag))
+	if not effects.is_empty():
+		var gap: Control = Control.new()
+		gap.custom_minimum_size.x = 4
+		row.add_child(gap)
+	for tag: Dictionary in effects:
+		row.add_child(_wired(_word(str(tag.get("text", "")), tag.get("color", Color("#9a9a9a"))), node, tag))
+	return row
 
 
-static func flow(node: InspectableNode, tags: Array, offers: Array) -> HFlowContainer:
-	var row: HFlowContainer = HFlowContainer.new()
-	row.add_theme_constant_override(&"h_separation", 5)
-	row.add_theme_constant_override(&"v_separation", 5)
+static func _wired(button: Button, node: InspectableNode, tag: Dictionary) -> Button:
+	button.tooltip_text = str(tag.get("tip", ""))
+	button.pressed.connect(func() -> void: open_editor(button, node, tag))
+	return button
+
+
+## What an answer gives, as coloured words without a frame: it happens, it is not a condition.
+static func _word(text: String, colour: Color) -> Button:
+	var word: Button = Button.new()
+	word.text = text
+	word.flat = true
+	word.focus_mode = Control.FOCUS_NONE
+	word.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	word.add_theme_font_size_override(&"font_size", 13)
+	for state: StringName in [&"font_color", &"font_hover_color", &"font_pressed_color", &"font_focus_color"]:
+		word.add_theme_color_override(state, colour if state != &"font_hover_color" else colour.lightened(0.25))
+	var none: StyleBoxEmpty = StyleBoxEmpty.new()
+	none.content_margin_left = 2
+	none.content_margin_right = 2
+	for style: StringName in [&"normal", &"hover", &"pressed", &"focus"]:
+		word.add_theme_stylebox_override(style, none)
+	return word
+
+
+static func flow(node: InspectableNode, tags: Array, offers: Array) -> HBoxContainer:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 5)
 	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	for tag: Dictionary in tags:
 		var chip: Button = _chip(str(tag.get("text", "")), tag.get("color", Color("#9a9a9a")))
@@ -141,21 +180,22 @@ static func _hook(graph_node: GraphNode, node: InspectableNode) -> void:
 					node.refresh_preview()).call_deferred())
 
 
-static func _chip(text: String, colour: Color) -> Button:
+static func _chip(text: String, colour: Color, small: bool = false) -> Button:
 	var chip: Button = Button.new()
 	chip.text = text
 	chip.focus_mode = Control.FOCUS_NONE
 	chip.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	chip.add_theme_font_size_override(&"font_size", 12)
+	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	chip.add_theme_font_size_override(&"font_size", 11 if small else 12)
 	for state: StringName in [&"font_color", &"font_hover_color", &"font_pressed_color", &"font_focus_color"]:
 		chip.add_theme_color_override(state, colour if state != &"font_hover_color" else colour.lightened(0.2))
 	var box: StyleBoxFlat = StyleBoxFlat.new()
 	box.bg_color = Color("#1c1c1c").lerp(colour, 0.13)
 	box.set_corner_radius_all(20)
-	box.content_margin_left = 8
-	box.content_margin_right = 8
-	box.content_margin_top = 3
-	box.content_margin_bottom = 3
+	box.content_margin_left = 6 if small else 8
+	box.content_margin_right = 6 if small else 8
+	box.content_margin_top = 1 if small else 3
+	box.content_margin_bottom = 1 if small else 3
 	var hover: StyleBoxFlat = box.duplicate()
 	hover.bg_color = Color("#1c1c1c").lerp(colour, 0.22)
 	chip.add_theme_stylebox_override(&"normal", box)
