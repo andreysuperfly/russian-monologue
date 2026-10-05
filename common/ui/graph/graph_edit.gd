@@ -267,6 +267,7 @@ func get_selected_nodes() -> Array[InspectableObject]:
 ## frames. Announcing on the first reports a rectangle of ten as a selection of one.
 ## Announcing on every one rebuilds the inspector ten times.
 func _announce_selection() -> void:
+	_paint_picked_cards_wires.call_deferred()
 	_selection_snapshot = _selected_view_names()
 	_settle_selection.call_deferred()
 
@@ -794,6 +795,24 @@ func _repaint_wire_selection() -> void:
 	_selected_wires.assign(still_here)
 	for wire: NodeConnection in _selected_wires:
 		_paint_wire(wire, 1.0)
+	_paint_picked_cards_wires()
+
+
+## The wires into and out of the picked cards are drawn red, both sides (russian-monologue);
+## the rest go back to plain, except the wires picked on their own.
+func _paint_picked_cards_wires() -> void:
+	var storyline: StorylineDocument = get_storyline()
+	if storyline == null:
+		return
+	var picked: Dictionary = {}
+	for name: StringName in _selected_view_names():
+		picked[String(name)] = true
+	for wire: NodeConnection in storyline.connections:
+		var lit: bool = picked.has(wire.from_node_id) or picked.has(wire.to_node_id) or _selected_wires.has(wire)
+		var from_port: int = get_port_index_for_property(wire.from_node_id, wire.get_from_name(), true)
+		var to_port: int = get_port_index_for_property(wire.to_node_id, wire.get_to_name(), false)
+		if from_port >= 0 and to_port >= 0 and is_node_connected(wire.from_node_id, from_port, wire.to_node_id, to_port):
+			set_connection_activity(wire.from_node_id, from_port, wire.to_node_id, to_port, 1.0 if lit else 0.0)
 
 
 ## Wires named by both their ends, so the ones aimed at are the ones that go even when

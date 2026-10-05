@@ -1060,9 +1060,11 @@ static func _setup_graphnode(theme: Theme) -> void:
 	panel_stylebox.shadow_color = Color("000000", 0.1)
 	panel_stylebox.shadow_size = 12
 
+	# a picked card keeps its colour and gets a red edge, the same as a card jumped to
+	# (russian-monologue); it used to turn lighter
 	var panel_selected_stylebox: StyleBoxFlat = panel_stylebox.duplicate()
-	panel_selected_stylebox.bg_color = bg_elevated_color
-	panel_selected_stylebox.border_color = bg_elevated_color
+	panel_selected_stylebox.border_color = Color("#d9534a")
+	panel_selected_stylebox.set_border_width_all(2)
 
 	theme.set_stylebox("panel", "GraphNode", panel_stylebox)
 	theme.set_stylebox("panel_selected", "GraphNode", panel_selected_stylebox)
