@@ -4,6 +4,7 @@ const WIRE_REACH: float = 8.0
 const OFFER_EXTRACT: int = 0
 const OFFER_BRIDGE_OUT: int = 1
 const OFFER_TEMPLATE: int = 2
+const OFFER_ADD_NODE: int = 3
 
 signal node_view_selected(node: InspectableNode)
 signal selection_changed(nodes: Array[InspectableObject])
@@ -611,7 +612,45 @@ func _on_popup_request(at_position: Vector2) -> void:
 		_cut_wires([wire])
 		return
 
-	_offer_on_selection(at_position)
+	# a right click on a card is about that card: it becomes the selection (russian-monologue)
+	var card: GraphNode = _card_at(at_position)
+	if card and not card.selected:
+		set_selected(card)
+	_offer_on_selection(at_position, card)
+
+
+## The card under a point of the graph, or null over empty canvas.
+func _card_at(at_position: Vector2) -> GraphNode:
+	var point: Vector2 = get_global_transform() * at_position
+	for child: Node in get_children():
+		if child is GraphNode and (child as GraphNode).visible and (child as GraphNode).get_global_rect().has_point(point):
+			return child as GraphNode
+	return null
+
+
+## «Add a node…» from a right click (russian-monologue). On a card, the new card stands to its
+## right, wired to the card's first output that leads nowhere yet; on empty canvas, where clicked.
+func _add_node_from(card: GraphNode, at_position: Vector2) -> void:
+	var node: InspectableNode = get_node_from_view_name(String(card.name)) if card else null
+	if node == null:
+		EventBus.enable_picker_mode.emit("", "", 0, (at_position + scroll_offset) / zoom)
+		return
+	var storyline: StorylineDocument = get_storyline()
+	for port: int in card.get_output_port_count():
+		var property: String = get_property_name_at_port(String(card.name), port, true)
+		if property.is_empty():
+			continue
+		var taken: bool = false
+		for wire: NodeConnection in storyline.connections:
+			if wire.from_node_id == node.get_id() and wire.get_from_name() == property:
+				taken = true
+				break
+		if not taken:
+			var port_at: Vector2 = card.position_offset + card.get_output_port_position(port)
+			EventBus.enable_picker_mode.emit(node.get_id(), property, card.get_output_port_type(port),
+				port_at + Vector2(110, 0))
+			return
+	EventBus.enable_picker_mode.emit("", "", 0, card.position_offset + Vector2(card.size.x + 110, 0))
 
 
 ## The wire under a point, or null when the point is aimed at none. GraphEdit answers in
@@ -786,12 +825,29 @@ func _cut_wires(wires: Array[NodeConnection]) -> void:
 
 
 ## Built each time and freed with the popup, since what it offers depends on the selection.
-func _offer_on_selection(at_position: Vector2) -> void:
+func _offer_on_selection(at_position: Vector2, card: GraphNode = null) -> void:
 	var selection: Array[InspectableNode] = _user_owned(_selected_model_nodes())
-	if selection.is_empty():
-		return
-
 	var menu: PopupMenu = PopupMenu.new()
+	menu.add_item(tr("Add a node…"), OFFER_ADD_NODE)
+	# a condition on the card under the pointer, as its add-on offers them (russian-monologue)
+	var under: InspectableNode = get_node_from_view_name(String(card.name)) if card else null
+	var offers: Array = CardTags.offers_of(under) if under else []
+	if not offers.is_empty():
+		var conditions: PopupMenu = PopupMenu.new()
+		for index: int in offers.size():
+			conditions.add_item(str(offers[index].get("text", "")), index)
+		conditions.id_pressed.connect(func(index: int) -> void:
+			CardTags.open_editor(card, under, offers[index].get("tag", {})))
+		menu.add_child(conditions)
+		menu.add_submenu_node_item(tr("Add a condition"), conditions)
+	if selection.is_empty():
+		menu.id_pressed.connect(func(_offer: int) -> void: _add_node_from(card, at_position))
+		menu.popup_hide.connect(menu.queue_free)
+		add_child(menu)
+		menu.position = Vector2i(get_screen_position() + at_position)
+		menu.popup()
+		return
+	menu.add_separator()
 	menu.add_item("Extract into a Section", OFFER_EXTRACT)
 	menu.add_item("Remove, Keeping the Chain", OFFER_BRIDGE_OUT)
 	menu.add_item("Save as template…", OFFER_TEMPLATE)
@@ -814,7 +870,11 @@ func _offer_on_selection(at_position: Vector2) -> void:
 				Bookmarks.add_item(str(folders[index][0]), {"kind": "node", "storyline": storyline_id, "node": node.get_id()}))
 		menu.add_child(into)
 		menu.add_submenu_node_item(tr("Add to a collection"), into)
-	menu.id_pressed.connect(_on_offer_chosen.bind(selection))
+	menu.id_pressed.connect(func(offer: int) -> void:
+		if offer == OFFER_ADD_NODE:
+			_add_node_from(card, at_position)
+		else:
+			_on_offer_chosen(offer, selection))
 	menu.popup_hide.connect(menu.queue_free)
 	add_child(menu)
 
@@ -996,11 +1056,9 @@ static func _what_goes_too(sections: Array[StorylineDocument]) -> String:
 		named.append("'%s'" % section.name)
 		held += section.nodes.size()
 
-	var counted: String = "%d node%s" % [held, "" if held == 1 else "s"]
-	# TODO: Rewrite this message.
 	if named.size() == 1:
-		return "The section %s goes too, with the %s in it." % [named[0], counted]
-	return "The sections %s go too, with the %s in them." % [", ".join(named), counted]
+		return TranslationServer.translate("The section %s goes too, with the nodes in it: %d.") % [named[0], held]
+	return TranslationServer.translate("The sections %s go too, with the nodes in them: %d.") % [", ".join(named), held]
 
 
 ## «↩ hub» (or «Уйти. ↩ hub» for an option) at the bottom of the card; pressing it goes there.

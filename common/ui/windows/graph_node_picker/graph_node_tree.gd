@@ -55,7 +55,7 @@ func reload_tree() -> void:
 		var category_item: TreeItem = create_item(root)
 		category_item.set_text(NAME_COLUMN, category)
 		category_item.set_selectable(NAME_COLUMN, false)
-		category_item.set_custom_color(NAME_COLUMN, ThemeLayout.text_muted_color)
+		category_item.set_custom_color(NAME_COLUMN, ThemeLayout.text_primary_color)
 		category_item.collapsed = true
 		for indexer: MonologueIndexer in offered:
 			_create_indexer_item(category_item, indexer)

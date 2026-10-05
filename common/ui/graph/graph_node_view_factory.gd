@@ -215,6 +215,7 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 		graph_node.set_slot_custom_icon_right(idx, SLOT_OUT_TEXTURE)
 
 	_add_preview(graph_node, node)
+	CardTags.add_to(graph_node, node)
 
 	# room under the rows' panel, so it does not touch the card's bottom edge
 	# (a spacer with no port, after the rows, so the ports keep their indices)
@@ -236,12 +237,14 @@ static func refresh_preview(graph_node: GraphNode, node: InspectableNode) -> voi
 	if not is_instance_valid(graph_node):
 		return
 
-	var showing: Node = graph_node.get_node_or_null(NodePath(PREVIEW_NAME))
-	if showing:
-		graph_node.remove_child(showing)
-		showing.queue_free()
+	for part: String in [PREVIEW_NAME, CardTags.NAME]:
+		var showing: Node = graph_node.get_node_or_null(NodePath(part))
+		if showing:
+			graph_node.remove_child(showing)
+			showing.queue_free()
 
 	_add_preview(graph_node, node)
+	CardTags.add_to(graph_node, node)
 	graph_node.reset_size()
 
 
@@ -545,11 +548,14 @@ static func _coloured_row_label(plain_label: Label, fallback: bool) -> RichTextL
 		number = text.substr(0, cut + 1)
 		text = text.substr(cut + 2)
 	# a branch is its test alone: the panel already says these are conditions (russian-monologue)
-	if text.begins_with("если: "):
-		text = text.substr(6)
+	# the words are the interface's, «if: » / «если: », as _item_label wrote them
+	var if_word: String = TranslationServer.translate("if: %s").get_slice("%s", 0)
+	if not if_word.is_empty() and text.begins_with(if_word):
+		text = text.substr(if_word.length())
 	var words: String = NodePreview.plain(text)
-	if text.begins_with("иначе:"):
-		words = "[color=%s]иначе:[/color]%s" % [ROW_IF_COLOUR, NodePreview.plain(text.substr(6))]
+	var else_word: String = TranslationServer.translate("else:")
+	if text.begins_with(else_word):
+		words = "[color=%s]%s[/color]%s" % [ROW_IF_COLOUR, else_word, NodePreview.plain(text.substr(else_word.length()))]
 	if fallback:
 		words = "[i]%s[/i]" % words
 	var label: RichTextLabel = RichTextLabel.new()

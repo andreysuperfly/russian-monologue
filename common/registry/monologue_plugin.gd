@@ -46,6 +46,17 @@ func card_note(_node: InspectableNode) -> String:
 	return ""
 
 
+## Tags under [param node]'s text: what decides whether it happens, each editable with a click
+## (russian-monologue). The shape is in [CardTags]. Empty: no tags.
+func card_tags(_node: InspectableNode) -> Array:
+	return []
+
+
+## Conditions that can be added to [param node]: [{"text", "tag"}], see [CardTags].
+func card_tag_offers(_node: InspectableNode) -> Array:
+	return []
+
+
 ## Called on uninstall. Types registered through [param registry] are removed automatically.
 ## Override only for extra teardown.
 func unregister(_registry: MonologueRegistry) -> void:

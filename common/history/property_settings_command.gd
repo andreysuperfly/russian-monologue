@@ -52,7 +52,10 @@ func _handle_connection_visibility(setting_value: Variant) -> void:
 	var graph_view: GraphNode = node.graph_view
 	if not graph_view:
 		return
-	var graph_edit: MonologueGraphEdit = graph_view.get_parent()
+	# undoing an added node takes its card off the graph first (russian-monologue)
+	var graph_edit: MonologueGraphEdit = graph_view.get_parent() as MonologueGraphEdit
+	if graph_edit == null:
+		return
 	var manager: ConnectionManager = graph_edit.connection_manager
 	if not manager:
 		return

@@ -26,7 +26,49 @@ func _ready() -> void:
 	extend_to_title = false
 	EventBus.enable_picker_mode.connect(_on_enable_picker_mode)
 	node_tree.type_highlighted.connect(_on_type_highlighted)
+	_make_readable()
 	_on_type_highlighted(null)
+
+
+## Bigger and brighter than the theme's default (russian-monologue): the list is read, not
+## skimmed — larger type, the categories in full white, roomier rows, «Add» in the accent colour.
+func _make_readable() -> void:
+	size = Vector2i(540, 620)
+	min_size = Vector2i(420, 420)
+	search_bar.custom_minimum_size.y = 42
+	search_bar.add_theme_font_size_override(&"font_size", 17)
+	node_tree.add_theme_font_size_override(&"font_size", 17)
+	node_tree.add_theme_color_override(&"font_color", ThemeLayout.text_primary_color)
+	node_tree.add_theme_constant_override(&"v_separation", 10)
+	node_tree.add_theme_constant_override(&"h_separation", 10)
+	node_tree.add_theme_constant_override(&"icon_max_width", 16)
+	description_label.add_theme_font_size_override(&"normal_font_size", 15)
+	description_label.add_theme_font_size_override(&"bold_font_size", 16)
+	description_label.add_theme_color_override(&"default_color", ThemeLayout.text_primary_color)
+	var panel: Control = description_label.get_parent()
+	if panel:
+		panel.custom_minimum_size.y = 96
+	var buttons: Array[Button] = [get_node("PanelContainer/VBox/HBox/CancelButton") as Button, %CreateButton as Button]
+	for button: Button in buttons:
+		button.custom_minimum_size = Vector2(130, 40)
+		button.add_theme_font_size_override(&"font_size", 16)
+		var box: StyleBoxFlat = StyleBoxFlat.new()
+		box.bg_color = Color(1, 1, 1, 0.08)
+		box.set_corner_radius_all(8)
+		box.set_content_margin_all(8)
+		var hover: StyleBoxFlat = box.duplicate()
+		hover.bg_color = Color(1, 1, 1, 0.14)
+		var off: StyleBoxFlat = box.duplicate()
+		off.bg_color = Color(1, 1, 1, 0.04)
+		if button.unique_name_in_owner:
+			box.bg_color = ThemeLayout.accent_color
+			hover.bg_color = ThemeLayout.accent_color.lightened(0.12)
+		button.add_theme_stylebox_override(&"normal", box)
+		button.add_theme_stylebox_override(&"hover", hover)
+		button.add_theme_stylebox_override(&"pressed", hover)
+		button.add_theme_stylebox_override(&"disabled", off)
+		button.add_theme_stylebox_override(&"focus", StyleBoxEmpty.new())
+		button.add_theme_color_override(&"font_color", Color.WHITE)
 
 
 ## Shows what the highlighted type is for. The tree only carries names, so the reading
@@ -34,13 +76,13 @@ func _ready() -> void:
 func _on_type_highlighted(indexer: NodeIndexer) -> void:
 	if indexer == null:
 		description_label.text = "[color=#%s]%s[/color]" % [
-			ThemeLayout.text_muted_color.to_html(false), NO_SELECTION_HINT
+			ThemeLayout.text_muted_color.to_html(false), tr(NO_SELECTION_HINT)
 		]
 		return
 
 	description_label.text = "[b]%s[/b]\n[color=#%s]%s[/color]" % [
 		indexer.get_display_name(),
-		ThemeLayout.text_muted_color.to_html(false),
+		ThemeLayout.text_primary_color.darkened(0.15).to_html(false),
 		indexer.description,
 	]
 

@@ -97,11 +97,11 @@ func add_node_from_global(node_type: String, picker: GraphNodePicker = null) -> 
 			node.get_property("target").set_value(section.id)
 
 	var graph_edit: MonologueGraphEdit = graph_container.graph
-	var target_position: Vector2 = (
-		picker.graph_release - PORT_FROM_CORNER
-		if picker and picker.has_source_port()
-		else graph_edit.middle_of_view()
-	)
+	var target_position: Vector2 = graph_edit.middle_of_view()
+	if picker and picker.has_source_port():
+		target_position = picker.graph_release - PORT_FROM_CORNER
+	elif picker and picker.graph_release != Vector2.ZERO:
+		target_position = picker.graph_release  # a right click: where it was asked for (russian-monologue)
 
 	# A pair of numbers and not a Vector2, which is what every other writer stores and the only
 	# shape JSON can carry.
@@ -130,7 +130,7 @@ func _connect_to_source_port(
 	var to_property: Property = _first_accepting_property(node, picker.source_port_type_id)
 	if to_property == null:
 		Log.warn(
-			"A '%s' has nothing that takes what was dragged into it." % node.get_type()
+			tr("A '%s' has nothing that takes what was dragged into it.") % tr(Util.to_readable_name(node.get_type()))
 		)
 		return
 
