@@ -1,6 +1,6 @@
 class_name MonologueGraphEdit extends CustomGraphEdit
 
-const WIRE_REACH: float = 8.0
+const WIRE_REACH: float = 12.0  # was 8: a thin wire was hard to catch, zoomed out above all
 const OFFER_EXTRACT: int = 0
 const OFFER_BRIDGE_OUT: int = 1
 const OFFER_TEMPLATE: int = 2
@@ -669,21 +669,23 @@ func _add_node_from(card: GraphNode, at_position: Vector2) -> void:
 ## view names and port numbers, which is not what a wire is stored as.
 func wire_at(at_position: Vector2, reach: float = WIRE_REACH) -> NodeConnection:
 	var found: Dictionary = get_closest_connection_at_point(at_position, reach)
-	var storyline: StorylineDocument = get_storyline()
-	if found.is_empty() or storyline == null:
+	if found.is_empty():
 		return null
+	return wire_between(str(found["from_node"]), int(found["from_port"]), str(found["to_node"]), int(found["to_port"]))
 
-	var from_node: InspectableNode = get_node_from_view_name(str(found["from_node"]))
-	var to_node: InspectableNode = get_node_from_view_name(str(found["to_node"]))
+
+## The stored wire behind two cards' ports (view names and port numbers), or null.
+func wire_between(from_view: String, from_port: int, to_view: String, to_port: int) -> NodeConnection:
+	var storyline: StorylineDocument = get_storyline()
+	if storyline == null:
+		return null
+	var from_node: InspectableNode = get_node_from_view_name(from_view)
+	var to_node: InspectableNode = get_node_from_view_name(to_view)
 	if from_node == null or to_node == null:
 		return null
 
-	var from_property: String = get_property_name_at_port(
-		str(found["from_node"]), int(found["from_port"]), true
-	)
-	var to_property: String = get_property_name_at_port(
-		str(found["to_node"]), int(found["to_port"]), false
-	)
+	var from_property: String = get_property_name_at_port(from_view, from_port, true)
+	var to_property: String = get_property_name_at_port(to_view, to_port, false)
 	if from_property.is_empty() or to_property.is_empty():
 		return null
 
@@ -769,6 +771,8 @@ var _pulling: bool = false
 var _pull_card: GraphNode
 var _pull_refused: String = ""
 var _pull_layer: Control
+## A pressed arc: where a click without a pull goes.
+var _pull_jump: GraphNode
 
 
 func _make_pull_layer() -> void:
@@ -796,10 +800,14 @@ func _on_wire_pull(event: InputEvent) -> bool:
 	if click == null or click.button_index != MOUSE_BUTTON_LEFT or click.pressed:
 		return false
 	var was_pulling: bool = _pulling
+	var jump: GraphNode = _pull_jump
 	if was_pulling:
 		_aim_pull(_card_at(click.position))
 		_let_go_of_pull()
 	_end_pull()
+	if not was_pulling and is_instance_valid(jump):
+		go_to(jump)
+		return true
 	return was_pulling
 
 
@@ -832,6 +840,7 @@ func _let_go_of_pull() -> void:
 
 func _end_pull() -> void:
 	_pull_wire = null
+	_pull_jump = null
 	_pulling = false
 	_pull_card = null
 	_pull_refused = ""
@@ -1412,7 +1421,8 @@ func _draw() -> void:
 		var end: Vector2 = to_view.position + to_view.get_input_port_position(wire[3]) * zoom
 		var lit: bool = from_view.selected or to_view.selected
 		var colour: Color = ThemeLayout.accent_color.lightened(0.25) if lit else Color(1, 1, 1, 0.22)
-		_arcs.append([_dashed_arc(start, end, colour, (2.0 if lit else 1.2) * zoom), from_view, to_view])
+		_arcs.append([_dashed_arc(start, end, colour, (2.0 if lit else 1.2) * zoom), from_view, to_view,
+			wire_between(String(from_view.name), wire[1], String(to_view.name), wire[3])])
 
 
 ## An S-shaped arc out of the right of one card and into the left of another, dashed, with
@@ -1465,7 +1475,7 @@ func _arc_at(at: Vector2) -> Array:
 		for i: int in points.size() - 1:
 			var near: Vector2 = Geometry2D.get_closest_point_to_segment(at, points[i], points[i + 1])
 			if near.distance_to(at) <= reach:
-				return [points, arc[1], arc[2], float(i) / maxf(1.0, points.size() - 1)]
+				return [points, arc[1], arc[2], float(i) / maxf(1.0, points.size() - 1), arc[3] if arc.size() > 3 else null]
 	return []
 
 
@@ -1489,7 +1499,16 @@ func _on_arc_input(event: InputEvent) -> void:
 	if hit.is_empty():
 		return
 	accept_event()
-	go_to(hit[2] if hit[3] < 0.85 else hit[1])
+	var jump: GraphNode = hit[2] if hit[3] < 0.85 else hit[1]
+	# pulled, the arc's wire goes onto a card like any wire; let go where it was taken, it jumps
+	if hit[4] is NodeConnection:
+		_pull_wire = hit[4]
+		_pull_from = click.position
+		_pull_to = click.position
+		_pulling = false
+		_pull_jump = jump
+		return
+	go_to(jump)
 
 
 ## Brings a card to the middle of the view and picks it; back/forward remember where we were.

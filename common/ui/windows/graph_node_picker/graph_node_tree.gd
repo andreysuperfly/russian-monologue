@@ -54,9 +54,8 @@ func reload_tree() -> void:
 
 		var category_item: TreeItem = create_item(root)
 		category_item.set_text(NAME_COLUMN, category)
-		category_item.set_selectable(NAME_COLUMN, false)
 		category_item.set_custom_color(NAME_COLUMN, ThemeLayout.text_primary_color)
-		category_item.collapsed = false  # every kind of node in view at once (russian-monologue)
+		category_item.collapsed = true  # folded: a click opens one (russian-monologue)
 		offered.sort_custom(func(a: MonologueIndexer, b: MonologueIndexer) -> bool:
 			return _rank(a.name) < _rank(b.name))
 		for indexer: MonologueIndexer in offered:
@@ -180,6 +179,13 @@ func _on_item_activated() -> void:
 
 func _on_item_selected() -> void:
 	var item: TreeItem = get_selected()
+	# one click on a category opens or folds it (russian-monologue); it is not a kind to add
+	if item and item.get_metadata(NAME_COLUMN) == null and item.get_child_count() > 0:
+		item.collapsed = not item.collapsed
+		item.deselect(NAME_COLUMN)
+		create_btn.disabled = true
+		type_highlighted.emit(null)
+		return
 	var indexer: NodeIndexer = _indexer_of(item)
 	create_btn.disabled = indexer == null
 	type_highlighted.emit(indexer)
@@ -236,10 +242,10 @@ func _matches(query: String, item: TreeItem) -> bool:
 	return false
 
 
-## Clears the filter: every category open, the state the picker opens in (russian-monologue —
-## folded categories hid what could be added).
+## Clears the filter and folds the categories back, the state the picker opens in.
 func _show_all(item: TreeItem) -> void:
 	item.visible = true
-	item.collapsed = false
+	if item != get_root():
+		item.collapsed = true
 	for child: TreeItem in item.get_children():
 		_show_all(child)
