@@ -69,7 +69,11 @@ func set_property_value(pname: String, pvalue: Variant) -> void:
 		if ProjectManager.current_project:
 			ProjectManager.current_project.content_changed.emit()
 	if pname == "language":
-		preload("res://i18n/locale.gd").apply(str(pvalue))
+		InterfaceLocale.apply(str(pvalue))
+		# cards and lists put their words together in code, so they are built again
+		EventBus.refresh_graph.emit()
+		if ProjectManager.current_project:
+			ProjectManager.current_project.content_changed.emit()
 
 
 func get_type() -> String:

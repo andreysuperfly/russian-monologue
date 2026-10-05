@@ -42,7 +42,7 @@ static func write(
 	var result: ValidationResult = ValidationResult.ok()
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
-		result.add_error("Could not write to '%s'." % path, &"translation_export_failed")
+		result.add_error(TranslationServer.translate("Could not write to '%s'.") % path, &"translation_export_failed")
 		return result
 
 	match format_for_path(path):
@@ -68,7 +68,7 @@ static func write(
 ## rather than raising: a half-readable file still delivers the half that reads.
 static func read(path: String, result: ValidationResult) -> Dictionary:
 	if not FileAccess.file_exists(path):
-		result.add_error("There is no file at '%s'." % path, &"translation_import_missing")
+		result.add_error(TranslationServer.translate("There is no file at '%s'.") % path, &"translation_import_missing")
 		return {}
 
 	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
@@ -88,7 +88,7 @@ static func read(path: String, result: ValidationResult) -> Dictionary:
 		file.close()
 		if parsed is not Dictionary:
 			result.add_error(
-				"'%s' does not contain a translation object." % path.get_file(),
+				TranslationServer.translate("'%s' does not contain a translation object.") % path.get_file(),
 				&"translation_import_shape"
 			)
 			return {}
@@ -129,7 +129,7 @@ static func from_csv_lines(
 	var key_column: int = header.find(KEY_COLUMN)
 	if key_column == -1:
 		result.add_error(
-			"The first row must name a '%s' column." % KEY_COLUMN,
+			TranslationServer.translate("The first row must name a '%s' column.") % KEY_COLUMN,
 			&"translation_import_no_key"
 		)
 		return {}
@@ -171,7 +171,7 @@ static func _normalise(parsed: Dictionary, result: ValidationResult) -> Dictiona
 	for language: Variant in parsed:
 		if parsed[language] is not Dictionary:
 			result.add_warning(
-				"'%s' does not hold a set of translations; it was skipped." % str(language),
+				TranslationServer.translate("'%s' does not hold a set of translations; it was skipped.") % str(language),
 				&"translation_import_shape"
 			)
 			continue

@@ -447,7 +447,7 @@ static func _node_text(project: MonologueProject, storyline_id: String, node_id:
 			if options is Array and not (options as Array).is_empty():
 				return "» " + NodePreview.trim(Util.to_label((options as Array)[0].get("text", {}), language), 32)
 		"genius_scene":
-			return "сцена " + str(node.get_property_value("key"))
+			return TranslationServer.translate("scene %s") % str(node.get_property_value("key"))
 	return NodePreview.node_label(project, node_id)
 
 

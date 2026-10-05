@@ -72,7 +72,7 @@ func validate_object(result: ValidationResult, context: ValidationContext) -> vo
 
 		result.add(
 			ValidationIssue.error(
-				"This carries %s into a port that takes %s."
+				tr("This carries %s into a port that takes %s.")
 				% [str(carried["label"]), str(into["label"])],
 				&"rerouted_into_the_wrong_type"
 			).at(self, property.name)

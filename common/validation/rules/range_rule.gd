@@ -17,9 +17,9 @@ func check(context: ValidationContext) -> ValidationResult:
 
 	var number: float = float(context.value)
 	if minimum != null and number < float(minimum):
-		return _fail(context, "Must be at least %s." % str(minimum))
+		return _fail(context, TranslationServer.translate("Must be at least %s.") % str(minimum))
 	if maximum != null and number > float(maximum):
-		return _fail(context, "Must be at most %s." % str(maximum))
+		return _fail(context, TranslationServer.translate("Must be at most %s.") % str(maximum))
 	return ValidationResult.ok()
 
 

@@ -142,7 +142,7 @@ func rebuild() -> void:
 		_add_notice("Nothing to show here.", true)
 	elif properties.is_empty():
 		_add_notice(
-			"These %d objects have no editable property in common." % inspected.size(), true
+			tr("These %d objects have no editable property in common.") % inspected.size(), true
 		)
 	else:
 		if inspected.size() > 1:

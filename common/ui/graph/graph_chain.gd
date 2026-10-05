@@ -48,16 +48,16 @@ static func wire_under(graph: MonologueGraphEdit, node: InspectableNode) -> Node
 static func refuse_reason(
 	storyline: StorylineDocument, node: InspectableNode, wire: NodeConnection
 ) -> String:
-	var named: String = Util.to_readable_name(node.get_type())
+	var named: String = TranslationServer.translate(Util.to_readable_name(node.get_type()))
 	if wire.from_node_id == node.get_id() or wire.to_node_id == node.get_id():
-		return "That wire already ends at this %s." % named
+		return TranslationServer.translate("That wire already ends at this %s.") % named
 
 	var passes: Property = node.get_pass_through_property()
 	if passes == null:
-		return "The story stops at a %s, so it cannot sit in the middle of a chain." % named
+		return TranslationServer.translate("The story stops at a %s, so it cannot sit in the middle of a chain.") % named
 
 	if not storyline.get_outgoing(node.get_id(), passes.name).is_empty():
-		return "This %s already leads somewhere, so dropping it here would fork the story." % named
+		return TranslationServer.translate("This %s already leads somewhere, so dropping it here would fork the story.") % named
 
 	return ""
 

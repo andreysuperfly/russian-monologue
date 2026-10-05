@@ -98,7 +98,7 @@ func _add_entry(label: String, target_id: String) -> void:
 ## Adds the broken entry for a target that is no longer there, and returns its index.
 ## Disabled so it cannot be chosen, but selected so the id stays visible and stored.
 func _add_missing_entry() -> int:
-	_add_entry(MISSING_PREFIX + _value, _value)
+	_add_entry(tr(MISSING_PREFIX) + _value, _value)
 	var index: int = option_button.item_count - 1
 	option_button.set_item_disabled(index, true)
 	return index
@@ -118,12 +118,12 @@ func _list_candidates() -> Array[Dictionary]:
 ## to, so an empty reference says what will happen rather than that nothing was picked.
 func _empty_label() -> String:
 	if _binding == null or _binding.property == null:
-		return EMPTY_LABEL
+		return tr(EMPTY_LABEL)
 
 	var fallback: String = ReferenceResolver.describe_default(
 		_get_project(), _scope(), _binding.owner, _label_property()
 	)
-	return DEFAULT_LABEL % fallback if not fallback.is_empty() else EMPTY_LABEL
+	return tr(DEFAULT_LABEL) % fallback if not fallback.is_empty() else tr(EMPTY_LABEL)
 
 
 func _scope() -> String:

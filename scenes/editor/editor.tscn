@@ -100,7 +100,7 @@ custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-tooltip_text = "Switch language"
+tooltip_text = "Language of the editor, and of the story text"
 
 [node name="RunButton" type="Button" parent="VBox/Header/HBoxContainer" unique_id=927762726]
 layout_mode = 2

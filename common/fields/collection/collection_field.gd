@@ -226,7 +226,7 @@ func _on_delete_item(index: int) -> void:
 
 	EventBus.ask_dialog.emit(
 		_on_delete_confirmed.bind(item),
-		"Delete %s?" % _describe(item),
+		TranslationServer.translate("Delete %s?") % _describe(item),
 		_describe_referrers(referrers),
 		"Delete anyway",
 		"Keep",
@@ -261,12 +261,12 @@ static func _describe(item: CollectionItem) -> String:
 
 static func _describe_referrers(referrers: Array[ReferenceSite]) -> String:
 	var lines: PackedStringArray = [
-		"%d place(s) still point at it, and will show it as missing:" % referrers.size()
+		TranslationServer.translate("%d place(s) still point at it, and will show it as missing:") % referrers.size()
 	]
 	for site: ReferenceSite in referrers.slice(0, MAX_LISTED_REFERRERS):
 		lines.append("  - %s (%s)" % [site, site.document_name])
 	if referrers.size() > MAX_LISTED_REFERRERS:
-		lines.append("  - and %d more" % (referrers.size() - MAX_LISTED_REFERRERS))
+		lines.append(TranslationServer.translate("  - and %d more") % (referrers.size() - MAX_LISTED_REFERRERS))
 	return "\n".join(lines)
 
 

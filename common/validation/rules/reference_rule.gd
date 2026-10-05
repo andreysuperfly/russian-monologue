@@ -32,7 +32,7 @@ func check(context: ValidationContext) -> ValidationResult:
 	return _fail(
 		context,
 		(
-			"%s points at '%s', which no longer exists."
+			TranslationServer.translate("%s points at '%s', which no longer exists.")
 			% [context.property.get_display_name(), target_id]
 		)
 	)

@@ -16,7 +16,7 @@ func check(context: ValidationContext) -> ValidationResult:
 	var length: int = str(context.value).length() if context.value != null else 0
 
 	if minimum >= 0 and length < minimum:
-		return _fail(context, "Must be at least %d character(s)." % minimum)
+		return _fail(context, TranslationServer.translate("Must be at least %d character(s).") % minimum)
 	if maximum >= 0 and length > maximum:
-		return _fail(context, "Must be at most %d character(s)." % maximum)
+		return _fail(context, TranslationServer.translate("Must be at most %d character(s).") % maximum)
 	return ValidationResult.ok()

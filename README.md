@@ -1,28 +1,106 @@
-# russian-monologue
+# Russian Monologue
 
-**Авторам:** как писать диалоги в Russian Monologue — [АВТОРАМ.md](АВТОРАМ.md).
+**Редактор ветвящихся диалогов для игр, переделанный под живую работу сценариста.**
+**A branching-dialogue editor for games, reworked for the way writers actually work.**
 
+[Русский](#русский) · [English](#english) · [Памятка автору / Writer's guide](АВТОРАМ.md)
 
-Форк [Monologue](https://github.com/monologue-tool/monologue) — редактора ветвящихся диалогов на Godot — с русским интерфейсом и удобствами для больших сценариев.
-*A fork of [Monologue](https://github.com/monologue-tool/monologue), the Godot branching-dialogue editor, with a Russian interface and quality-of-life features for large scripts.*
-
-**Что уже есть / What's in so far**
-- Русский и английский интерфейс, «Правка → Настройки → Язык интерфейса», на лету. / Russian & English UI, switch live in Edit → Preferences.
-- Условия фразой: несколько проверок через И / ИЛИ, «НЕ», «был в узле» (сколько раз проходили — без ручных флагов), «в карманах». / Conditions as several checks: AND/OR, NOT, "was at" a node, "carries" an item.
-- Окно проигрывания: панель «Состояние» (переменные можно менять, карманы, пройдено) и перемотка после правки — как в Inky. / Run window: editable State panel; replays your path after an edit.
-- Сохранённые маршруты: записать прохождение и потом проверить, что оно ещё проходит. / Saved routes: record a path, check it still gets through.
-- «Правка → Проверка истории»: все проблемы одним списком (плюс переменные, которые меняют, но не проверяют, и пометки TODO), «где используется», «путь к концовке» — от концовки назад, что нужно на каждом пути. / Problems & usages window, where-used, path to an ending read backwards.
-- Карточки схемы читаются без открытия (реплика целиком), узел «Заметка» — цветной стикер. / Readable cards, sticky Note node.
-- Шаблоны: выделить узлы → «Сохранить как шаблон…», вставить через «Добавить → Шаблоны». / Templates with their wires.
-- «Файл → Экспорт сценария (текст)…» — весь проект как сценарий для чтения. / Export the whole project as a readable script.
-- Картинки рядом с именами: лица персонажей и иконки вещей на карточках, в списках и меню; «Вид → Показывать картинки». / Faces and item icons beside names; View → Show Pictures.
-- Дополнения проекта: папка `monologue-plugins/<имя>/plugin.gd` рядом с файлом `.mnlp` добавляет свои узлы только этому проекту (при первом открытии Monologue спросит, доверять ли). Так узлы игры живут в игре, а не в этом репозитории. / Project add-ons: `monologue-plugins/<name>/plugin.gd` beside the `.mnlp` adds node types for that project only, after asking once. See `common/plugins/project_plugins.gd`.
-- Группы сюжетных линий слева («Группа · Название»), открытие `.mnlp` при запуске. / Grouped storylines, open a file on startup.
-
-Перевод: таблица `i18n/make_ru.py` → `i18n/ru.csv` (английский текст — ключ). Translations live in `i18n/`.
-Оригинальный проект и лицензия MIT — © Atomic Junky. Original project and MIT license © Atomic Junky.
+<!-- скриншоты: docs/screenshots/*.png — добавятся к релизу -->
 
 ---
+
+## Русский
+
+Russian Monologue — большой авторский форк [Monologue](https://github.com/monologue-tool/monologue), открытого редактора диалогов на Godot. Его ведёт [andreysuperfly](https://github.com/andreysuperfly) и проверяет в бою: на нём пишутся все диалоги игры «Гений в Санкт-Петербурге».
+
+Это не перевод интерфейса поверх чужой программы. В форке **85 коммитов и около 7 000 новых строк кода**, переписана или заново написана **почти треть файлов редактора**. Схема, карточки, поиск, проверка истории, окно проигрывания — всё пересобрано вокруг одного вопроса: как сценаристу не потеряться в сотнях реплик.
+
+### Чем он лучше оригинала
+
+**Схема читается без кликов**
+- Карточки показывают реплику целиком, ответы пронумерованы 1. 2. 3. — как их увидит игрок.
+- Провода не сливаются: параллельные линии разведены по дорожкам, обходят карточки, обратные связи — тонкие пунктирные дуги со стрелкой ↩.
+- Две кнопки раскладки — «Разложить плотно» и «Разложить просторно» — выстраивают карточки по ходу истории без единого наложения, с полной отменой ⌘Z.
+- Реплику можно править прямо на карточке двойным щелчком. Цвет карточки или целой ветки — правой кнопкой.
+
+**Условия словами, а не кодом**
+- Несколько проверок через И / ИЛИ / НЕ, «был в узле» (сколько раз проходили — без ручных флагов), «в карманах».
+- У переменной есть поле «по-человечески», и карточки читаются фразой: «если дверь выбита», «запомнить: дверь осмотрена».
+
+**Ничего не теряется**
+- Поиск по всему проекту: по любым словам, без учёта регистра и ё/е — реплики, ответы, говорящие, заметки, условия.
+- «Проверка истории»: все проблемы одним списком, переменные, которые меняют, но не проверяют, пометки «ДОДЕЛАТЬ».
+- «Где используется» — словами: какой ответ, что он требует или даёт. «Путь к концовке» — от концовки назад, что нужно на каждом пути.
+- Свои папки-подборки для сюжетных линий и узлов, переходы «назад / вперёд» по местам в истории, открытие там, где остановились.
+
+**Проверка на ходу**
+- Окно проигрывания с панелью «Состояние»: переменные можно менять, видно карманы и пройденное, после правки путь проигрывается заново — как в Inky.
+- Сохранённые маршруты: записать прохождение и потом убедиться, что оно всё ещё проходит.
+- «Файл → Экспорт сценария (текст)…» — весь проект как читаемый текст.
+
+**Под конкретную игру — без форка форка**
+- Дополнения проекта: папка `monologue-plugins/<имя>/plugin.gd` рядом с `.mnlp` добавляет свои узлы и поля только этому проекту. Узлы игры живут в игре, а не в редакторе.
+- Шаблоны: выделить узлы → «Сохранить как шаблон…», вставить вместе с проводами.
+
+**Два языка по-честному**
+- Русский и английский интерфейс переключаются на лету прямо в шапке; около 790 строк перевода, склонения по числам («1 ошибка / 3 ошибки / 5 ошибок»).
+- Тесты следят, чтобы в коде интерфейса не осталось непереведённого текста.
+
+### Установка
+
+- **macOS:** установщик `.pkg` — на странице [Releases](https://github.com/andreysuperfly/russian-monologue/releases).
+- **Из исходников:** открыть папку в Godot 4.7 — см. [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Как писать диалоги — короткая [памятка автору](АВТОРАМ.md).
+
+---
+
+## English
+
+Russian Monologue is a major fork of [Monologue](https://github.com/monologue-tool/monologue), the open-source Godot dialogue editor. It is maintained by [andreysuperfly](https://github.com/andreysuperfly) and battle-tested daily: every dialogue of the game *Genius in Saint Petersburg* is written in it.
+
+This is not a translation layered on someone else's app. The fork adds **85 commits and about 7,000 new lines of code**, and **nearly a third of the editor's files** are rewritten or new. The graph, the cards, search, story checking and the play window were all rebuilt around one question: how does a writer stay oriented among hundreds of lines?
+
+### What it does better
+
+**A graph you can read without clicking**
+- Cards show the whole line; answers are numbered 1. 2. 3., the way the player sees them.
+- Wires never merge: parallel lines get their own lanes and route around cards; back links are thin dashed arcs with a ↩.
+- Two layout buttons, *Lay Out Tight* and *Lay Out Roomy*, arrange cards in story order with zero overlaps and full ⌘Z undo.
+- Edit a line right on its card with a double click; colour a card or a whole branch from the right-click menu.
+
+**Conditions in words, not code**
+- Several checks with AND / OR / NOT, *was at* a node (visit counts, no manual flags), *carries* an item.
+- Variables get an *In plain words* field, so cards read as sentences: "if the door is broken", "remember: door inspected".
+
+**Nothing gets lost**
+- Project-wide search: any words, case-insensitive — lines, answers, speakers, notes, conditions.
+- *Problems and usages*: every problem in one list, variables that are set but never checked, TODO marks.
+- *Where used* in plain words: which answer, what it needs or gives. *Path to an ending* reads backwards: what each route requires.
+- Your own folders for storylines and nodes, back / forward through places in the story, reopens where you left off.
+
+**Test as you write**
+- A play window with a *State* panel: edit variables, see inventory and visited nodes; after an edit it replays your path, Inky-style.
+- Saved routes: record a playthrough, then check it still gets through.
+- *File → Export screenplay (text)…*: the whole project as a readable script.
+
+**Fits a specific game without forking the fork**
+- Project add-ons: `monologue-plugins/<name>/plugin.gd` beside the `.mnlp` adds node types and fields for that project only, after asking once.
+- Templates: select nodes → *Save as template…*, insert them later with their wires.
+
+**Two languages, done properly**
+- Russian and English UI, switched live from the header; ~790 translated strings with proper plural forms.
+- Tests make sure no untranslated text is left in interface code.
+
+### Install
+
+- **macOS:** a `.pkg` installer on the [Releases](https://github.com/andreysuperfly/russian-monologue/releases) page.
+- **From source:** open the folder in Godot 4.7 — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+Оригинальный Monologue и лицензия MIT — © Atomic Junky и соавторы. Ниже — описание оригинального проекта.
+Original Monologue and its MIT license © Atomic Junky and contributors. The original project's description follows.
 
 ![Monologue](title_banner.png)
 

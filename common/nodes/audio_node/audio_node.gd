@@ -45,4 +45,4 @@ func _build_preview(_language: String = "") -> Control:
 		return null
 	if get_property_value("loop") != true:
 		return NodePreview.line(NodePreview.plain(stream))
-	return NodePreview.line("%s [i]loop[/i]" % NodePreview.plain(stream))
+	return NodePreview.line("%s [i]%s[/i]" % [NodePreview.plain(stream), tr("loop")])

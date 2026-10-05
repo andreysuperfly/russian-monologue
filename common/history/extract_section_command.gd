@@ -49,8 +49,7 @@ static func refuse_reason(
 
 	if ways_in != 1:
 		return (
-			"A section is entered in one place, and this selection is entered in %d. "
-			+ "Select a single chain."
+			TranslationServer.translate("A section is entered in one place, and this selection is entered in %d. Select a single chain.")
 		) % ways_in
 
 	# A section is left by a chain that ran out, so a node the story leaves from must be
@@ -65,9 +64,8 @@ static func refuse_reason(
 				leaves = true
 		if leaves and carries_on:
 			return (
-				"'%s' branches both inside and outside the selection, so the section would "
-				+ "have no way out of it. Take the whole branch in."
-			) % Util.to_readable_name(node.get_type())
+				TranslationServer.translate("'%s' branches both inside and outside the selection, so the section would have no way out of it. Take the whole branch in.")
+			) % TranslationServer.translate(Util.to_readable_name(node.get_type()))
 
 	return ""
 

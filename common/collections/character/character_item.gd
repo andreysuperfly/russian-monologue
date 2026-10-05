@@ -55,5 +55,5 @@ func get_preview_property_names() -> Array[String]:
 ## shown on screen. Worth mentioning, not worth blocking.
 func _has_no_portrait(context: ValidationContext) -> Variant:
 	if context.value is Array and (context.value as Array).is_empty():
-		return "%s has no portrait." % get_property_value("name")
+		return tr("%s has no portrait.") % get_property_value("name")
 	return null

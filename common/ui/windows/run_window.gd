@@ -91,7 +91,7 @@ func play(project: MonologueProject, storyline_id: String = "", node_id: String 
 	_replay_at = -1
 	_set_status("")
 	if not runtime.load_documents(ProjectWriter.documents_of(project)):
-		Log.error("This story cannot be played; see the problems above.")
+		Log.error(tr("This story cannot be played; see the problems above."))
 		return
 
 	popup_centered()
@@ -406,7 +406,7 @@ func _apply_overrides() -> void:
 
 
 func _on_story_ended(reason: String) -> void:
-	Log.info("The story stopped: %s." % reason)
+	Log.info(tr("The story stopped: %s.") % reason)
 	if not _route_name.is_empty():
 		var reached: int = _replay_at
 		var finished: bool = reached < 0 or reached >= _journey.size()

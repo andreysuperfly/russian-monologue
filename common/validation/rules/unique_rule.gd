@@ -17,7 +17,7 @@ func check(context: ValidationContext) -> ValidationResult:
 			return _fail(
 				context,
 				(
-					"Another %s already uses %s '%s'."
+					TranslationServer.translate("Another %s already uses %s '%s'.")
 					% [
 						sibling.get_type(),
 						context.property.get_display_name().to_lower(),

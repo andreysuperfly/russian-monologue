@@ -45,7 +45,7 @@ func set_editable(is_editable: bool) -> void:
 
 func _refresh() -> void:
 	browse_button.text = _value.get_file() if _value.get_file() else EMPTY_TEXT
-	browse_button.tooltip_text = "File path: %s" % _value
+	browse_button.tooltip_text = tr("File path: %s") % _value
 	clear_button.disabled = _value.is_empty() or browse_button.disabled
 	clear_button.visible = not _value.is_empty()
 

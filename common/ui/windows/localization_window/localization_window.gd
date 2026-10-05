@@ -166,7 +166,7 @@ func _build_header(columns: Array[Dictionary]) -> void:
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.size_flags_stretch_ratio = float(column["stretch"])
 		button.text = _header_text(column)
-		button.tooltip_text = "Sort by %s" % column["title"]
+		button.tooltip_text = tr("Sort by %s") % tr(str(column["title"]))
 		button.pressed.connect(_on_header_pressed.bind(column_id))
 		header.add_child(button)
 
@@ -350,11 +350,11 @@ func _update_coverage(shown: int) -> void:
 	var target: String = get_target_language()
 	if is_same_language():
 		coverage_label.text = (
-			"Reading and writing %s — pick a different language to translate into" % target
+			tr("Reading and writing %s — pick a different language to translate into") % target
 		)
 		return
 
-	coverage_label.text = "%d of %d lines translated into %s — showing %d" % [
+	coverage_label.text = tr("%d of %d lines translated into %s — showing %d") % [
 		_table.entries.size() - _table.missing(target).size(),
 		_table.entries.size(),
 		target,
@@ -418,7 +418,7 @@ func _export_to(path: String, format: TranslationIO.Format) -> void:
 		for issue: ValidationIssue in result.errors():
 			Log.error(str(issue))
 		return
-	Log.info("Exported %d lines to '%s'." % [_table.entries.size(), path])
+	Log.info(tr("Exported %d lines to '%s'.") % [_table.entries.size(), path])
 
 
 ## Import never invents rows: a key the project does not have is reported and dropped,
@@ -434,7 +434,7 @@ func _import_from(path: String) -> void:
 		else:
 			Log.warn(str(issue))
 
-	Log.info("Imported %d line(s) from '%s'." % [applied, path])
+	Log.info(tr("Imported %d line(s) from '%s'.") % [applied, path])
 	reload()
 
 

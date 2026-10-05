@@ -18,7 +18,7 @@ static func migrate(
 
 	result.add_error(
 		(
-			"This project uses file format %d, which this version of Monologue cannot read."
+			TranslationServer.translate("This project uses file format %d, which this version of Monologue cannot read.")
 			% from_version
 		),
 		&"unsupported_format"

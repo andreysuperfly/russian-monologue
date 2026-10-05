@@ -109,7 +109,7 @@ static func _write_tree(project: MonologueProject, path: String) -> ValidationRe
 	]
 	for directory: String in folders:
 		if DirAccess.make_dir_recursive_absolute(directory) != OK:
-			return result.add_error("Could not create '%s'." % directory, &"write_failed")
+			return result.add_error(TranslationServer.translate("Could not create '%s'.") % directory, &"write_failed")
 
 	_write_document(project.manifest, path.path_join(MANIFEST), result)
 	_write_document(project.settings, path.path_join(SETTINGS), result)
@@ -156,7 +156,7 @@ static func _write_document(
 static func _write_data(data: Dictionary, path: String, result: ValidationResult) -> void:
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
-		result.add_error("Could not write '%s'." % path, &"write_failed")
+		result.add_error(TranslationServer.translate("Could not write '%s'.") % path, &"write_failed")
 		return
 	file.store_string(laid_out(data))
 	file.close()
@@ -171,7 +171,7 @@ static func _pack_documents(project: MonologueProject, temp_path: String) -> Val
 	var error: Error = writer.open(temp_path, ZIPPacker.APPEND_CREATE)
 	if error != OK:
 		return result.add_error(
-			"Could not open '%s' for writing (error %d)." % [temp_path, error], &"write_failed"
+			TranslationServer.translate("Could not open '%s' for writing (error %d).") % [temp_path, error], &"write_failed"
 		)
 
 	pack_document(writer, project.manifest, MANIFEST)
@@ -199,19 +199,19 @@ static func _swap_into_place(temp_path: String, path: String) -> ValidationResul
 	if not FileAccess.file_exists(path):
 		if DirAccess.rename_absolute(temp_path, path) != OK:
 			DirAccess.remove_absolute(temp_path)
-			return result.add_error("Could not write '%s'." % path, &"write_failed")
+			return result.add_error(TranslationServer.translate("Could not write '%s'.") % path, &"write_failed")
 		return result
 
 	var backup_path: String = path + BACKUP_SUFFIX
 	DirAccess.remove_absolute(backup_path)
 	if DirAccess.rename_absolute(path, backup_path) != OK:
 		DirAccess.remove_absolute(temp_path)
-		return result.add_error("Could not replace '%s'." % path, &"write_failed")
+		return result.add_error(TranslationServer.translate("Could not replace '%s'.") % path, &"write_failed")
 
 	if DirAccess.rename_absolute(temp_path, path) != OK:
 		DirAccess.rename_absolute(backup_path, path)
 		DirAccess.remove_absolute(temp_path)
-		return result.add_error("Could not write '%s'; kept the previous version." % path,
+		return result.add_error(TranslationServer.translate("Could not write '%s'; kept the previous version.") % path,
 			&"write_failed")
 
 	DirAccess.remove_absolute(backup_path)

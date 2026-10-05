@@ -36,7 +36,7 @@ func _build_preview(_language: String = "") -> Control:
 	var test: String = NodePreview.condition(get_property_value("test"))
 	if test.is_empty():
 		return null
-	return NodePreview.line("[i]when[/i] %s" % NodePreview.plain(test))
+	return NodePreview.line("[i]%s[/i] %s" % [tr("when"), NodePreview.plain(test)])
 
 
 ## An event with nothing to watch never fires, which is worth saying out loud.

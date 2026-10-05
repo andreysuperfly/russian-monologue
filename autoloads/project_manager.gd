@@ -203,7 +203,7 @@ func _update_window_title() -> void:
 		DisplayServer.window_set_title(base_title)
 		return
 
-	var title: String = "<unsaved>"
+	var title: String = tr("<unsaved>")
 	if current_project.project_path:
 		title = current_project.project_path.get_file().get_basename()
 

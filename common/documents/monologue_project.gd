@@ -289,8 +289,7 @@ func save() -> void:
 	if not load_issues.is_valid():
 		Log.warn(
 			(
-				"Saving over '%s', which had %d error(s) when it was opened. "
-				+ "Anything that failed to load will be lost."
+				TranslationServer.translate("Saving over '%s', which had %d error(s) when it was opened. Anything that failed to load will be lost.")
 			) % [project_path, load_issues.errors().size()]
 		)
 

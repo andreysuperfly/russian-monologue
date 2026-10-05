@@ -94,7 +94,7 @@ func apply_batch(batch: Dictionary, result: ValidationResult = null) -> int:
 			if get_entry(key) == null:
 				if result:
 					result.add_warning(
-						"No text in this project is called '%s'; it was left out." % key,
+						TranslationServer.translate("No text in this project is called '%s'; it was left out.") % key,
 						&"unknown_translation_key"
 					)
 				continue

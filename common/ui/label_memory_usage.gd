@@ -3,7 +3,7 @@ class_name MemoryUsageLabel extends Label
 
 func _process(_delta: float) -> void:
 	var memory_usage: float = Performance.get_monitor(Performance.MEMORY_STATIC) / 1_048_576.0
-	text = "Memory: %.1f MB" % memory_usage
+	text = tr("Memory: %.1f MB") % memory_usage
 
 	var fps: float = Performance.get_monitor(Performance.TIME_FPS)
 	var time_process: float = Performance.get_monitor(Performance.TIME_PROCESS)

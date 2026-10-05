@@ -281,23 +281,27 @@ func _make_card(is_error: bool, message: String, location: String, object_id: St
 	return card
 
 
-## «3 ошибки» in Russian, «3 errors» otherwise.
+## «3 errors», «3 ошибки». The words come from the translation as «one|few|many».
 func _count_label(count: int, errors: bool) -> String:
-	if TranslationServer.get_locale().begins_with("ru"):
-		return _format_plural(count, "ошибка", "ошибки", "ошибок") if errors else _format_plural(count, "предупреждение", "предупреждения", "предупреждений")
-	return "%d %s" % [count, ("error" if count == 1 else "errors") if errors else ("warning" if count == 1 else "warnings")]
+	var forms: PackedStringArray = tr("error|errors|errors" if errors else "warning|warnings|warnings").split("|")
+	return _format_plural(count, forms)
 
 
-func _format_plural(count: int, form1: String, form2: String, form5: String) -> String:
+## Picks «one|few|many»: Russian counts 1, 2–4 and 5+ apart (21 ошибка, 22 ошибки), English only 1.
+static func _format_plural(count: int, forms: PackedStringArray) -> String:
+	while forms.size() < 3:
+		forms.append(forms[forms.size() - 1] if not forms.is_empty() else "")
+	if not TranslationServer.get_locale().begins_with("ru"):
+		return "%d %s" % [count, forms[0] if count == 1 else forms[1]]
 	var c: int = abs(count) % 100
 	var c1: int = c % 10
 	if c > 10 and c < 20:
-		return "%d %s" % [count, form5]
+		return "%d %s" % [count, forms[2]]
 	if c1 > 1 and c1 < 5:
-		return "%d %s" % [count, form2]
+		return "%d %s" % [count, forms[1]]
 	if c1 == 1:
-		return "%d %s" % [count, form1]
-	return "%d %s" % [count, form5]
+		return "%d %s" % [count, forms[0]]
+	return "%d %s" % [count, forms[2]]
 
 
 ## Messages built from a field name («Image is required.») are translated piece by piece.
