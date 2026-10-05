@@ -191,10 +191,16 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 			var go: Button = _go_button(node, row.get_connection_name())
 			container.add_child(go)
 			# shown while the pointer is over its row: a clean card until you reach for it
+			# and pressable only then: an unseen one took clicks meant for the card and jumped away
 			go.modulate.a = 0.0
-			container.mouse_entered.connect(func() -> void: go.modulate.a = 1.0)
+			go.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			container.mouse_entered.connect(func() -> void:
+				go.modulate.a = 1.0
+				go.mouse_filter = Control.MOUSE_FILTER_STOP)
 			container.mouse_exited.connect(func() -> void:
-				_when_left(container, func() -> void: go.modulate.a = 0.0, &"watching_go"))
+				_when_left(container, func() -> void:
+					go.modulate.a = 0.0
+					go.mouse_filter = Control.MOUSE_FILTER_IGNORE, &"watching_go"))
 		container.add_child(value_label)
 		graph_node.add_child(container)
 

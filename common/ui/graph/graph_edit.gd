@@ -1305,11 +1305,16 @@ func _arc_at(at: Vector2) -> Array:
 func _on_arc_input(event: InputEvent) -> void:
 	if _arcs.is_empty():
 		return
+	# an arc that runs under a card is not there to be clicked: the card is (a click on a card's
+	# title used to jump far away along the arc beneath it)
 	if event is InputEventMouseMotion:
-		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not _arc_at(event.position).is_empty() else Control.CURSOR_ARROW
+		var over_arc: bool = _card_at(event.position) == null and not _arc_at(event.position).is_empty()
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if over_arc else Control.CURSOR_ARROW
 		return
 	var click: InputEventMouseButton = event as InputEventMouseButton
 	if click == null or not click.pressed or click.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if _card_at(click.position) != null:
 		return
 	var hit: Array = _arc_at(click.position)
 	if hit.is_empty():

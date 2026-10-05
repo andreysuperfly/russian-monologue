@@ -13,8 +13,45 @@ class_name CardTags
 const NAME: String = "CardTags"
 const LIGHT_ON: Color = Color("#7fa8c9")
 const LIGHT_OFF: Color = Color("#4a4a4a")
-## Cards whose tags are put away by a click on their light, by node id (this session).
-static var hidden: Dictionary = {}
+## Tags are put away by default; the cards whose light was clicked to show them are kept per
+## project, in a small file next to the preferences — the project file is not touched.
+const SHOWN_FILE: String = "user://card_checks_shown.json"
+static var _shown: Dictionary = {}  # project path → {node id: true}
+static var _shown_loaded: bool = false
+
+
+static func _project_key() -> String:
+	var project: MonologueProject = ProjectManager.current_project
+	return str(project.project_path) if project else ""
+
+
+static func _shown_here() -> Dictionary:
+	if not _shown_loaded:
+		_shown_loaded = true
+		var file: FileAccess = FileAccess.open(SHOWN_FILE, FileAccess.READ)
+		if file:
+			var data: Variant = JSON.parse_string(file.get_as_text())
+			if data is Dictionary:
+				_shown = data
+	var key: String = _project_key()
+	if not _shown.has(key) or not _shown[key] is Dictionary:
+		_shown[key] = {}
+	return _shown[key]
+
+
+static func is_hidden(node: InspectableNode) -> bool:
+	return not _shown_here().has(node.get_id())
+
+
+static func set_shown(node: InspectableNode, show: bool) -> void:
+	var here: Dictionary = _shown_here()
+	if show:
+		here[node.get_id()] = true
+	else:
+		here.erase(node.get_id())
+	var file: FileAccess = FileAccess.open(SHOWN_FILE, FileAccess.WRITE)
+	if file:
+		file.store_string(JSON.stringify(_shown))
 ## In a value: take this key out of the map, or put this one in place of "old".
 const ERASE: String = "__erase"
 const ENTRY: String = "__entry"
@@ -82,7 +119,7 @@ static func _for_item(tags: Array, property: String, item_id: String) -> Array:
 static func add_to(graph_node: GraphNode, node: InspectableNode) -> void:
 	_hook(graph_node, node)
 	var tags: Array = tags_of(node)
-	if tags.is_empty() or hidden.has(node.get_id()):
+	if tags.is_empty() or is_hidden(node):
 		return
 	var box: PanelContainer = PanelContainer.new()
 	box.name = NAME
@@ -101,7 +138,7 @@ static func add_to(graph_node: GraphNode, node: InspectableNode) -> void:
 static func for_item(graph_node: GraphNode, node: InspectableNode, property: String, item_id: String) -> Control:
 	_hook(graph_node, node)
 	var tags: Array = item_tags(node, property, item_id)
-	if tags.is_empty() or hidden.has(node.get_id()):
+	if tags.is_empty() or is_hidden(node):
 		return null
 	# in the answer's own line, on its right: the conditions as small marks, then what it gives
 	# as coloured words; no «+» on every answer — a right click adds one. A plain row, not a
@@ -177,7 +214,7 @@ static func light(node: InspectableNode) -> Control:
 	if not can_have(node):
 		return null
 	var any: bool = has_any(node)
-	var away: bool = hidden.has(node.get_id())
+	var away: bool = is_hidden(node)
 	var dot: Button = Button.new()
 	dot.focus_mode = Control.FOCUS_NONE
 	dot.custom_minimum_size = Vector2(18, 18)
@@ -199,10 +236,7 @@ static func light(node: InspectableNode) -> Control:
 		return dot
 	dot.tooltip_text = TranslationServer.translate("Show the checks") if away else TranslationServer.translate("Hide the checks")
 	dot.pressed.connect(func() -> void:
-		if hidden.has(node.get_id()):
-			hidden.erase(node.get_id())
-		else:
-			hidden[node.get_id()] = true
+		set_shown(node, is_hidden(node))
 		node.rebuild_preview())
 	return dot
 
