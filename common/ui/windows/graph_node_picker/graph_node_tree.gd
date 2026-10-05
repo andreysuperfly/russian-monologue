@@ -38,7 +38,7 @@ func reload_tree() -> void:
 	var registry: MonologueRegistry = MonologueRegistry.get_instance()
 	var accepted: PackedStringArray = _accepted_type_names(registry)
 
-	for category: String in registry.list_categories(MonologueObjectType.NODE):
+	for category: String in _in_order(registry.list_categories(MonologueObjectType.NODE)):
 		var offered: Array[MonologueIndexer] = []
 		for indexer: MonologueIndexer in registry.list_by_category(
 			MonologueObjectType.NODE, category
@@ -57,6 +57,8 @@ func reload_tree() -> void:
 		category_item.set_selectable(NAME_COLUMN, false)
 		category_item.set_custom_color(NAME_COLUMN, ThemeLayout.text_primary_color)
 		category_item.collapsed = false  # every kind of node in view at once (russian-monologue)
+		offered.sort_custom(func(a: MonologueIndexer, b: MonologueIndexer) -> bool:
+			return _rank(a.name) < _rank(b.name))
 		for indexer: MonologueIndexer in offered:
 			_create_indexer_item(category_item, indexer)
 
@@ -65,6 +67,30 @@ func reload_tree() -> void:
 
 	deselect_all()
 	type_highlighted.emit(null)
+
+
+## The kinds a writer reaches for most come first: lines and choices, then checks (russian-monologue).
+const FIRST: PackedStringArray = ["Narration", "Logic", "Genius", "Value", "Flow", "Stage", "World", "Notes"]
+
+
+## Within a category, the everyday kinds first, then the rest as they come.
+const FIRST_KINDS: PackedStringArray = ["sentence", "choice", "condition", "variable", "genius_scene", "end"]
+
+
+static func _rank(kind: String) -> int:
+	var at: int = FIRST_KINDS.find(kind)
+	return at if at >= 0 else FIRST_KINDS.size()
+
+
+static func _in_order(categories: PackedStringArray) -> PackedStringArray:
+	var ordered: PackedStringArray = []
+	for category: String in FIRST:
+		if category in categories:
+			ordered.append(category)
+	for category: String in categories:
+		if category not in ordered:
+			ordered.append(category)
+	return ordered
 
 
 ## Machine names this picker will offer, or empty for "no restriction". A picker opened
@@ -203,8 +229,9 @@ func _matches(query: String, item: TreeItem) -> bool:
 	if parent and parent != get_root():
 		haystack.append(parent.get_text(NAME_COLUMN))
 
+	# the names are stored in English and only drawn translated: «реп» has to find «Sentence» too
 	for candidate: String in haystack:
-		if candidate.containsn(query):
+		if candidate.containsn(query) or TranslationServer.translate(candidate).containsn(query):
 			return true
 	return false
 

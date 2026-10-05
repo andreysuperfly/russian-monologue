@@ -27,6 +27,7 @@ func _ready() -> void:
 	EventBus.enable_picker_mode.connect(_on_enable_picker_mode)
 	node_tree.type_highlighted.connect(_on_type_highlighted)
 	_make_readable()
+	_make_palette()
 	_on_type_highlighted(null)
 
 
@@ -46,7 +47,7 @@ func _make_readable() -> void:
 	description_label.add_theme_color_override(&"default_color", ThemeLayout.text_primary_color)
 	var panel: Control = description_label.get_parent()
 	if panel:
-		panel.custom_minimum_size.y = 96
+		panel.custom_minimum_size.y = 64
 	var buttons: Array[Button] = [get_node("PanelContainer/VBox/HBox/CancelButton") as Button, %CreateButton as Button]
 	for button: Button in buttons:
 		button.custom_minimum_size = Vector2(130, 40)
@@ -68,6 +69,106 @@ func _make_readable() -> void:
 		button.add_theme_stylebox_override(&"disabled", off)
 		button.add_theme_stylebox_override(&"focus", StyleBoxEmpty.new())
 		button.add_theme_color_override(&"font_color", Color.WHITE)
+
+
+# ---------- every kind of node at a glance (russian-monologue) ----------
+# The tree showed one category per screen: «Flow» filled the window and lines and choices sat far
+# below. Here each category is a heading with its kinds as tiles, several to a row, so the whole
+# list fits. The tree stays underneath, hidden: it still filters, keeps the first match for Enter
+# and knows which kinds a dragged wire can reach.
+var _palette: ScrollContainer
+var _tiles: VBoxContainer
+
+
+func _make_palette() -> void:
+	_palette = ScrollContainer.new()
+	_palette.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_palette.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_tiles = VBoxContainer.new()
+	_tiles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tiles.add_theme_constant_override(&"separation", 6)
+	_palette.add_child(_tiles)
+	node_tree.get_parent().add_child(_palette)
+	node_tree.get_parent().move_child(_palette, node_tree.get_index())
+	node_tree.visible = false
+	search_bar.text_changed.connect(func(_text: String) -> void: _fill_palette.call_deferred())
+
+
+func _fill_palette() -> void:
+	if _tiles == null:
+		return
+	for old: Node in _tiles.get_children():
+		old.queue_free()
+	var root: TreeItem = node_tree.get_root()
+	if root == null:
+		return
+	var first: TreeItem = node_tree.get_selected()
+	for category: TreeItem in root.get_children():
+		if not category.visible:
+			continue
+		var kinds: Array[TreeItem] = []
+		for kind: TreeItem in category.get_children():
+			if kind.visible and kind.get_metadata(GraphNodeTree.NAME_COLUMN) != null:
+				kinds.append(kind)
+		if kinds.is_empty():
+			if category.get_metadata(GraphNodeTree.NAME_COLUMN) == null and category.get_child_count() == 0:
+				_tiles.add_child(_heading(category.get_text(GraphNodeTree.NAME_COLUMN)))  # «nothing accepts…»
+			continue
+		_tiles.add_child(_heading(category.get_text(GraphNodeTree.NAME_COLUMN)))
+		var row: HFlowContainer = HFlowContainer.new()
+		row.add_theme_constant_override(&"h_separation", 6)
+		row.add_theme_constant_override(&"v_separation", 6)
+		for kind: TreeItem in kinds:
+			row.add_child(_tile(kind, kind == first))
+		_tiles.add_child(row)
+
+
+func _heading(text: String) -> Label:
+	var label: Label = Label.new()
+	label.text = text
+	label.add_theme_font_size_override(&"font_size", 13)
+	label.add_theme_color_override(&"font_color", ThemeLayout.text_muted_color)
+	label.uppercase = true
+	return label
+
+
+func _tile(kind: TreeItem, first: bool) -> Button:
+	var type_name: String = String(kind.get_metadata(GraphNodeTree.NAME_COLUMN))
+	var indexer: NodeIndexer = MonologueRegistry.get_instance().get_node(type_name)
+	var tile: Button = Button.new()
+	tile.text = kind.get_text(GraphNodeTree.NAME_COLUMN)
+	tile.icon = kind.get_icon(GraphNodeTree.NAME_COLUMN)
+	tile.expand_icon = false
+	tile.add_theme_constant_override(&"icon_max_width", 16)
+	tile.add_theme_color_override(&"icon_normal_color", kind.get_icon_modulate(GraphNodeTree.NAME_COLUMN))
+	tile.add_theme_color_override(&"icon_hover_color", kind.get_icon_modulate(GraphNodeTree.NAME_COLUMN))
+	tile.add_theme_color_override(&"font_color", ThemeLayout.text_primary_color)
+	tile.add_theme_color_override(&"font_hover_color", Color.WHITE)
+	tile.add_theme_font_size_override(&"font_size", 16)
+	tile.custom_minimum_size = Vector2(0, 38)
+	tile.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	tile.focus_mode = Control.FOCUS_NONE
+	tile.tooltip_text = indexer.description if indexer else ""
+	var box: StyleBoxFlat = StyleBoxFlat.new()
+	box.bg_color = Color(1, 1, 1, 0.06)
+	box.set_corner_radius_all(7)
+	box.content_margin_left = 10
+	box.content_margin_right = 12
+	box.content_margin_top = 6
+	box.content_margin_bottom = 6
+	if first:  # what Enter would add, after a search
+		box.border_color = ThemeLayout.accent_color
+		box.set_border_width_all(2)
+	var hover: StyleBoxFlat = box.duplicate()
+	hover.bg_color = Color(1, 1, 1, 0.13)
+	tile.add_theme_stylebox_override(&"normal", box)
+	tile.add_theme_stylebox_override(&"hover", hover)
+	tile.add_theme_stylebox_override(&"pressed", hover)
+	tile.mouse_entered.connect(func() -> void: _on_type_highlighted(indexer))
+	tile.pressed.connect(func() -> void:
+		EventBus.add_graph_node.emit(type_name, self)
+		close())
+	return tile
 
 
 ## Shows what the highlighted type is for. The tree only carries names, so the reading
@@ -126,12 +227,13 @@ func open_for_node(
 
 	if node_tree:
 		node_tree.reload_tree()
+	_fill_palette()
 
 	popup()
 	# the size in points, not pixels: on a retina screen 540 pixels came up as a small window
 	await get_tree().process_frame
 	oversampling_override = maxf(content_scale_factor, 1.0)
-	size = Vector2i(Vector2(540, 640) * maxf(content_scale_factor, 1.0))
+	size = Vector2i(Vector2(760, 760) * maxf(content_scale_factor, 1.0))
 	move_to_center()
 
 	var root_window: Window = get_tree().get_root()
