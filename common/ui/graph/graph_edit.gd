@@ -812,15 +812,53 @@ func _on_wire_pull(event: InputEvent) -> bool:
 
 
 func _aim_pull(card: GraphNode) -> void:
+	var was: GraphNode = _pull_card
 	_pull_card = null
 	_pull_refused = ""
-	if card == null:
+	var node: InspectableNode = get_node_from_view_name(String(card.name)) if card else null
+	if node:
+		_pull_card = card
+		_pull_refused = GraphChain.refuse_reason(get_storyline(), node, _pull_wire)
+	if was != _pull_card:
+		_edge_back(was)
+	if _pull_card:
+		_edge_on(_pull_card, PULL_OK if _pull_refused.is_empty() else MARK_RED)
+
+
+## The aimed card's own edge in blue (red when it cannot go there), the way a picked card's is
+## red; what it had before is kept and given back.
+var _pull_edges: Dictionary = {}
+
+
+func _edge_on(card: GraphNode, colour: Color) -> void:
+	if not _pull_edges.has(card):
+		var kept: Dictionary = {}
+		for style_name: StringName in [&"panel", &"panel_selected"]:
+			kept[style_name] = card.get_theme_stylebox(style_name) if card.has_theme_stylebox_override(style_name) else null
+		_pull_edges[card] = kept
+	for style_name: StringName in [&"panel", &"panel_selected"]:
+		var base: StyleBox = _pull_edges[card][style_name]
+		if base == null:
+			base = get_theme_stylebox(style_name, &"GraphNode") if card.get_theme_stylebox(style_name) == null else card.get_theme_stylebox(style_name)
+		if base is StyleBoxFlat:
+			var box: StyleBoxFlat = (base as StyleBoxFlat).duplicate()
+			box.border_color = colour
+			box.set_border_width_all(2)
+			card.add_theme_stylebox_override(style_name, box)
+
+
+func _edge_back(card: GraphNode) -> void:
+	if card == null or not _pull_edges.has(card):
 		return
-	var node: InspectableNode = get_node_from_view_name(String(card.name))
-	if node == null:
+	var kept: Dictionary = _pull_edges[card]
+	_pull_edges.erase(card)
+	if not is_instance_valid(card):
 		return
-	_pull_card = card
-	_pull_refused = GraphChain.refuse_reason(get_storyline(), node, _pull_wire)
+	for style_name: StringName in [&"panel", &"panel_selected"]:
+		if kept[style_name] == null:
+			card.remove_theme_stylebox_override(style_name)
+		else:
+			card.add_theme_stylebox_override(style_name, kept[style_name])
 
 
 func _let_go_of_pull() -> void:
@@ -839,6 +877,7 @@ func _let_go_of_pull() -> void:
 
 
 func _end_pull() -> void:
+	_edge_back(_pull_card)
 	_pull_wire = null
 	_pull_jump = null
 	_pulling = false
@@ -855,8 +894,7 @@ func _draw_pull() -> void:
 	_pull_layer.draw_circle(_pull_from, 4.0, colour)
 	if _pull_card == null or not is_instance_valid(_pull_card):
 		return
-	var rect: Rect2 = Rect2(_pull_card.position, _pull_card.size * zoom).grow(4.0)
-	_pull_layer.draw_rect(rect, colour, false, 2.0)
+	var rect: Rect2 = Rect2(_pull_card.position, _pull_card.size * zoom)
 	var words: String = tr("Let go — put it here") if _pull_refused.is_empty() else _pull_refused
 	var font: Font = get_theme_default_font()
 	var size: int = 14
