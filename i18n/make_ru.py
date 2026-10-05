@@ -283,6 +283,13 @@ T.update({
 "[center][b]Russian Monologue[/b][/center]\n\nНашли ошибку — напишите о ней на [url=https://github.com/andreysuperfly/russian-monologue/issues]GitHub[/url].\n\nСпасибо, что пользуетесь!",
 "Storyline «%s»":"Диалог «%s»","Open this place on the graph":"Открыть это место на схеме","Show on the graph →":"Показать на схеме →","Click a place: the graph opens there and its card flashes red.":"Нажмите на место — откроется схема, и нужная карточка мигнёт красным.","A line — %s":"Реплика — %s","A line":"Реплика","Player's answer":"Ответ игрока","Player's choice":"Выбор игрока","A check":"Проверка условия","Choices":"Выборы","Lay Out Tight":"Разложить плотно","Lay Out Roomy":"Разложить просторно","Tight":"Плотно","Roomy":"Просторно","Lay Out Tight (Undo: ⌘Z)":"Разложить плотно (отмена: ⌘Z)","Lay Out Roomy (Undo: ⌘Z)":"Разложить просторно (отмена: ⌘Z)","Separate Parallel Wires":"Разделять параллельные линии","Separate Wires":"Разделять линии","Avoid Cards":"Огибать карточки","Route parallel wires in separate lanes so they do not merge (Undo: toggle again)":"Вести параллельные линии в отдельных полосах, чтобы они не сливались (отмена: нажать ещё раз)","Route parallel wires in separate lanes so they do not overlap":"Вести параллельные линии в отдельных полосах, чтобы они не накладывались","Go to the card this leads to":"Перейти к карточке, куда это ведёт","Colour the whole line from here…":"Цвет всей линии отсюда…","This card and every card after it, up to where the line joins another.":"Эта карточка и все после неё — до места, где линия сливается с другой.","The file «%s» in the folder «%s» has changes that are not saved.":"В файле «%s» (папка «%s») есть несохранённые изменения.","All places":"Все места","Where it is given or taken away":"Где даёт или отнимает","Where it is needed or checked":"Где нужно или проверяется","the story goes on one way if this is so, another if not":"если это так — история идёт по одной ветке, если нет — по другой",
 })
+# --- другая программа изменила открытый файл: её правки вливаются (russian-monologue) ---
+T.update({
+"External edits applied. Nodes changed: %d":"Правки снаружи применены. Изменено узлов: %d",
+"Conflicting nodes: %d":"Конфликтующих узлов: %d",
+"You and another program both changed the same fields here:\n%s\nYour version is kept. Take the version on disk for these instead?":"Здесь одни и те же поля изменили и вы, и другая программа:\n%s\nОставлена ваша версия. Взять для них версию с диска?",
+"Take disk version":"Взять с диска","Keep mine":"Оставить мои",
+})
 with open(__file__.replace('make_ru.py','ru.csv'),'w',newline='',encoding='utf-8') as f:
     w=csv.writer(f); w.writerow(['keys','ru'])
     for k,v in T.items(): w.writerow([k,v])

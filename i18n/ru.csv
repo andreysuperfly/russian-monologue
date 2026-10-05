@@ -625,3 +625,12 @@ All places,Все места
 Where it is given or taken away,Где даёт или отнимает
 Where it is needed or checked,Где нужно или проверяется
 "the story goes on one way if this is so, another if not","если это так — история идёт по одной ветке, если нет — по другой"
+External edits applied. Nodes changed: %d,Правки снаружи применены. Изменено узлов: %d
+Conflicting nodes: %d,Конфликтующих узлов: %d
+"You and another program both changed the same fields here:
+%s
+Your version is kept. Take the version on disk for these instead?","Здесь одни и те же поля изменили и вы, и другая программа:
+%s
+Оставлена ваша версия. Взять для них версию с диска?"
+Take disk version,Взять с диска
+Keep mine,Оставить мои

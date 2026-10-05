@@ -46,6 +46,9 @@ func _ready() -> void:
 		EventBus.load_project.emit.call_deferred(to_open)
 	EventBus.request_storyline_inspection.connect(_remember_place)
 	ProjectManager.project_loaded.connect(_return_to_place)
+	ProjectManager.reloading_from_disk.connect(_note_view_before_reload)
+	ProjectManager.reloaded_from_disk.connect(func(changed: int) -> void:
+		_toast(tr(ProjectManager.MERGED) % changed))
 
 
 func _select_new_node() -> void:
@@ -265,6 +268,8 @@ func _add_history_buttons() -> void:
 	graph_container.graph.scroll_offset_changed.connect(_on_view_moved)
 	graph_container.graph.jumped.connect(_on_graph_jump)
 	ProjectManager.project_loaded.connect(func() -> void:
+		if _view_before_reload.get("path", "") == ProjectManager.current_project.project_path:
+			return  # the same project read again: its storylines are the same ones
 		_views.clear()
 		_history.clear()
 		_history_at = -1
@@ -394,6 +399,11 @@ func _return_to_place() -> void:
 	var project: MonologueProject = ProjectManager.current_project
 	if project == null or project.project_path.is_empty():
 		return
+	var view: Dictionary = _view_before_reload
+	_view_before_reload = {}
+	if view.get("path", "") == project.project_path:
+		_return_to_view(project, view)
+		return
 	var storyline: StorylineDocument = project.get_storyline(str(_places().get(project.project_path, "")))
 	if storyline == null:
 		return
@@ -402,6 +412,76 @@ func _return_to_place() -> void:
 	await get_tree().process_frame
 	if ProjectManager.current_project == project:
 		EventBus.request_storyline_inspection.emit(storyline)
+
+
+# ---------- another program's edits merged in (russian-monologue) ----------
+
+var _view_before_reload: Dictionary = {}
+
+
+## Where the writer stood when another program changed the file: the same storyline, spot, zoom
+## and selected cards once its edits are merged in.
+func _note_view_before_reload() -> void:
+	var project: MonologueProject = ProjectManager.current_project
+	var graph: MonologueGraphEdit = graph_container.graph if graph_container else null
+	if project == null or graph == null:
+		return
+	var selected: PackedStringArray = []
+	for object: Variant in graph_container._selected_nodes.get(graph.storyline_id, []):
+		if object is InspectableNode and is_instance_valid(object):
+			selected.append((object as InspectableNode).get_id())
+	_view_before_reload = {
+		"path": project.project_path,
+		"storyline": graph.storyline_id,
+		"offset": graph.scroll_offset,
+		"zoom": graph.zoom,
+		"selected": selected,
+	}
+
+
+func _return_to_view(project: MonologueProject, view: Dictionary) -> void:
+	var storyline: StorylineDocument = project.get_storyline(str(view["storyline"]))
+	if storyline == null:
+		return  # gone in the new version: the project opens where it opens
+	# after the project list has opened its first storyline, which it does on load
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if ProjectManager.current_project != project:
+		return
+	var graph: MonologueGraphEdit = graph_container.graph
+	if graph.storyline_id != storyline.id:
+		EventBus.request_storyline_inspection.emit(storyline)
+		await get_tree().process_frame
+	graph.zoom = view["zoom"]
+	graph.scroll_offset = view["offset"]
+	var selection: Array[InspectableObject] = []
+	for id: String in view["selected"]:
+		var node: InspectableNode = storyline.get_node(id)
+		if node:
+			selection.append(node)
+	if not selection.is_empty():
+		EventBus.request_nodes_selection.emit(selection, storyline.id, true)
+
+
+## A short note over the graph that goes away by itself.
+func _toast(text: String) -> void:
+	var note: PanelContainer = PanelContainer.new()
+	note.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var box: StyleBoxFlat = StyleBoxFlat.new()
+	box.bg_color = Color(0, 0, 0, 0.72)
+	box.set_corner_radius_all(8)
+	box.set_content_margin_all(10)
+	note.add_theme_stylebox_override(&"panel", box)
+	var label: Label = Label.new()
+	label.text = text
+	note.add_child(label)
+	add_child(note)
+	note.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE)
+	note.position.y = 56
+	var fade: Tween = note.create_tween()
+	fade.tween_interval(2.5)
+	fade.tween_property(note, "modulate:a", 0.0, 0.6)
+	fade.tween_callback(note.queue_free)
 
 
 func _places() -> Dictionary:

@@ -294,12 +294,20 @@ func save() -> void:
 			) % [project_path, load_issues.errors().size()]
 		)
 
+	# someone else wrote the file since it was opened: their edits are merged in first, and the
+	# merged copy, which took this one's place in the editor, is the one written
+	var latest: MonologueProject = await ProjectManager.catch_up_with_disk(self)
+	if latest != self:
+		await latest.save()
+		return
+
 	var result: ValidationResult = ProjectWriter.write_project(self, project_path)
 	if not result.is_valid():
 		for issue: ValidationIssue in result.errors():
 			Log.error(str(issue))
 		return
 
+	ProjectManager.note_written(self)
 	is_dirty = false
 	Log.info("Project saved at path '%s'" % project_path)
 	# A project saved for the first time was opened before it had a path, so this is the
