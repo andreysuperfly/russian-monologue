@@ -11,6 +11,10 @@ class_name CardTags
 ## carries "key", the one it edits ("" for a new one). An offer: {"text", "tag"}.
 
 const NAME: String = "CardTags"
+const LIGHT_ON: Color = Color("#7fa8c9")
+const LIGHT_OFF: Color = Color("#4a4a4a")
+## Cards whose tags are put away by a click on their light, by node id (this session).
+static var hidden: Dictionary = {}
 ## In a value: take this key out of the map, or put this one in place of "old".
 const ERASE: String = "__erase"
 const ENTRY: String = "__entry"
@@ -78,7 +82,7 @@ static func _for_item(tags: Array, property: String, item_id: String) -> Array:
 static func add_to(graph_node: GraphNode, node: InspectableNode) -> void:
 	_hook(graph_node, node)
 	var tags: Array = tags_of(node)
-	if tags.is_empty():
+	if tags.is_empty() or hidden.has(node.get_id()):
 		return
 	var box: PanelContainer = PanelContainer.new()
 	box.name = NAME
@@ -88,7 +92,8 @@ static func add_to(graph_node: GraphNode, node: InspectableNode) -> void:
 	room.content_margin_left = 0
 	room.content_margin_top = 4
 	box.add_theme_stylebox_override(&"panel", room)
-	box.add_child(flow(node, tags, offers_of(node)))
+	# no «+» here: more checks are added from a tag's own window, or with a right click
+	box.add_child(flow(node, tags, []))
 	graph_node.add_child(box)
 
 
@@ -96,7 +101,7 @@ static func add_to(graph_node: GraphNode, node: InspectableNode) -> void:
 static func for_item(graph_node: GraphNode, node: InspectableNode, property: String, item_id: String) -> Control:
 	_hook(graph_node, node)
 	var tags: Array = item_tags(node, property, item_id)
-	if tags.is_empty():
+	if tags.is_empty() or hidden.has(node.get_id()):
 		return null
 	# in the answer's own line, on its right: the conditions as small marks, then what it gives
 	# as coloured words; no «+» on every answer — a right click adds one. A plain row, not a
@@ -140,6 +145,66 @@ static func _word(text: String, colour: Color) -> Button:
 	for style: StringName in [&"normal", &"hover", &"pressed", &"focus"]:
 		word.add_theme_stylebox_override(style, none)
 	return word
+
+
+## Whether [param node] has any tags, on itself or on any item of its lists.
+static func has_any(node: InspectableNode) -> bool:
+	if not tags_of(node).is_empty():
+		return true
+	for property: Property in node.get_properties():
+		if property.type == "collection" and property.get_value() is Array:
+			for item: Variant in property.get_value():
+				if item is Dictionary and not item_tags(node, property.name, str(item.get("id", ""))).is_empty():
+					return true
+	return false
+
+
+## Whether checks can be put on [param node] at all.
+static func can_have(node: InspectableNode) -> bool:
+	if not offers_of(node).is_empty():
+		return true
+	for property: Property in node.get_properties():
+		if property.type == "collection" and property.get_value() is Array:
+			for item: Variant in property.get_value():
+				if item is Dictionary and not item_offers(node, property.name, str(item.get("id", ""))).is_empty():
+					return true
+	return false
+
+
+## The light at the top right of a card that can have checks: blue-grey when it has some, grey
+## when it has none; a click puts its tags away and brings them back (russian-monologue).
+static func light(node: InspectableNode) -> Control:
+	if not can_have(node):
+		return null
+	var any: bool = has_any(node)
+	var away: bool = hidden.has(node.get_id())
+	var dot: Button = Button.new()
+	dot.focus_mode = Control.FOCUS_NONE
+	dot.custom_minimum_size = Vector2(18, 18)
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	dot.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if any else Control.CURSOR_ARROW
+	for style: StringName in [&"normal", &"hover", &"pressed", &"focus", &"disabled"]:
+		dot.add_theme_stylebox_override(style, StyleBoxEmpty.new())
+	var colour: Color = LIGHT_ON if any else LIGHT_OFF
+	dot.draw.connect(func() -> void:
+		var centre: Vector2 = dot.size * 0.5
+		if away:
+			dot.draw_arc(centre, 4.0, 0.0, TAU, 24, colour, 1.5, true)
+		else:
+			if any:
+				dot.draw_circle(centre, 7.0, Color(colour, 0.18))
+			dot.draw_circle(centre, 4.0, colour))
+	if not any:
+		dot.tooltip_text = TranslationServer.translate("No checks on this card. A right click adds one.")
+		return dot
+	dot.tooltip_text = TranslationServer.translate("Show the checks") if away else TranslationServer.translate("Hide the checks")
+	dot.pressed.connect(func() -> void:
+		if hidden.has(node.get_id()):
+			hidden.erase(node.get_id())
+		else:
+			hidden[node.get_id()] = true
+		node.rebuild_preview())
+	return dot
 
 
 static func flow(node: InspectableNode, tags: Array, offers: Array) -> HBoxContainer:
@@ -386,6 +451,13 @@ static func open_editor(anchor: Control, node: InspectableNode, tag: Dictionary)
 		var remove: Button = _button(TranslationServer.translate("Remove the condition"), false)
 		remove.pressed.connect(func() -> void: apply.call(clear))
 		buttons.add_child(remove)
+	if not others.is_empty():
+		var more: Button = _button("+ " + TranslationServer.translate("another check"), false)
+		more.pressed.connect(func() -> void:
+			popup.hide()
+			anchor.remove_meta(&"tag_editor_closed_at")
+			offer_menu(anchor, node, others))
+		buttons.add_child(more)
 	var done: Button = _button(TranslationServer.translate("Done"), true)
 	done.pressed.connect(func() -> void: apply.call(values.call()))
 	buttons.add_child(done)

@@ -131,6 +131,11 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 
 		if idx == 0:
 			key_label.theme_type_variation = "GraphNodeViewTitleLabel"
+			# checks light at the top right: there are some, or none, and a click puts them away
+			var checks_light: Control = CardTags.light(node)
+			if checks_light:
+				value_label.text = ""
+				container.add_child.call_deferred(checks_light)
 			if tint.a > 0.0:
 				var dot: Panel = Panel.new()
 				dot.custom_minimum_size = Vector2(8, 8)
@@ -166,9 +171,9 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 				container.set_meta(&"lit", true)
 				container.queue_redraw())
 			container.mouse_exited.connect(func() -> void:
-				if not Rect2(Vector2.ZERO, container.size).has_point(container.get_local_mouse_position()):
+				_when_left(container, func() -> void:
 					container.set_meta(&"lit", false)
-					container.queue_redraw())
+					container.queue_redraw()))
 			container.draw.connect(_draw_row_light.bind(container))
 
 		# an answer's conditions under its words, as tags (russian-monologue CardTags)
@@ -189,8 +194,7 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 			go.modulate.a = 0.0
 			container.mouse_entered.connect(func() -> void: go.modulate.a = 1.0)
 			container.mouse_exited.connect(func() -> void:
-				if not Rect2(Vector2.ZERO, container.size).has_point(container.get_local_mouse_position()):
-					go.modulate.a = 0.0)
+				_when_left(container, func() -> void: go.modulate.a = 0.0, &"watching_go"))
 		container.add_child(value_label)
 		graph_node.add_child(container)
 
@@ -318,6 +322,21 @@ static func _add_preview(graph_node: GraphNode, node: InspectableNode) -> void:
 				graph_node.reset_size.call_deferred()
 	window.resized.connect(fit, CONNECT_DEFERRED)
 	preview.minimum_size_changed.connect(fit, CONNECT_DEFERRED)
+
+
+## Runs [param off] once the pointer is really out of [param row]. Passing onto a tag or a button
+## inside the row also counts as leaving it, and leaving that button for outside the row tells the
+## row nothing — rows used to stay lit, several at once. So the row watches until it is left.
+static func _when_left(row: Control, off: Callable, key: StringName = &"watching") -> void:
+	if row.has_meta(key):
+		return
+	row.set_meta(key, true)
+	while is_instance_valid(row) and row.is_inside_tree() \
+			and Rect2(Vector2.ZERO, row.size).has_point(row.get_local_mouse_position()):
+		await row.get_tree().process_frame
+	if is_instance_valid(row):
+		row.remove_meta(key)
+		off.call()
 
 
 static func _language() -> String:
