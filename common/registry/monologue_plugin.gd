@@ -57,6 +57,17 @@ func card_tag_offers(_node: InspectableNode) -> Array:
 	return []
 
 
+## Tags under one item of [param node]'s list [param property] — an answer of a choice —
+## given as its stored [param item]. Their keys are the item's keys. See [CardTags].
+func card_item_tags(_node: InspectableNode, _property: String, _item: Dictionary) -> Array:
+	return []
+
+
+## Conditions that can be added to that item: [{"text", "tag"}].
+func card_item_tag_offers(_node: InspectableNode, _property: String, _item: Dictionary) -> Array:
+	return []
+
+
 ## Called on uninstall. Types registered through [param registry] are removed automatically.
 ## Override only for extra teardown.
 func unregister(_registry: MonologueRegistry) -> void:

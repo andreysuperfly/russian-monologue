@@ -171,7 +171,22 @@ static func populate(graph_node: GraphNode, node: InspectableNode) -> void:
 					container.queue_redraw())
 			container.draw.connect(_draw_row_light.bind(container))
 
-		container.add_child(shown)
+		# an answer's conditions under its words, as tags (russian-monologue CardTags)
+		var item_tags: Control = null
+		if is_item:
+			var parts: PackedStringArray = row.sub_property_id.split(NodeConnection.ITEM_SEPARATOR)
+			if parts.size() == 2 and not parts[1].begins_with(NodeConnection.EXTERNAL_PREFIX):
+				item_tags = CardTags.for_item(graph_node, node, parts[0], parts[1])
+		if item_tags:
+			var stack: VBoxContainer = VBoxContainer.new()
+			stack.mouse_filter = Control.MOUSE_FILTER_PASS
+			stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			stack.add_theme_constant_override(&"separation", 4)
+			stack.add_child(shown)
+			stack.add_child(item_tags)
+			container.add_child(stack)
+		else:
+			container.add_child(shown)
 		# a small «→» on a wired answer or branch: goes to the card it leads to, however far
 		# (russian-monologue)
 		if (is_item or is_fallback) and _row_has_wire(row, node):

@@ -840,6 +840,27 @@ func _offer_on_selection(at_position: Vector2, card: GraphNode = null) -> void:
 			CardTags.open_editor(card, under, offers[index].get("tag", {})))
 		menu.add_child(conditions)
 		menu.add_submenu_node_item(tr("Add a condition"), conditions)
+	# and to each answer of a choice: «Условие ответа» › «1. Кто такой Пушкин?» › …
+	if under and card:
+		var answers: PopupMenu = PopupMenu.new()
+		var number: int = 0
+		for list_property: Property in under.get_properties():
+			if list_property.type != "collection" or not list_property.get_value() is Array:
+				continue
+			for item: Variant in list_property.get_value():
+				if not item is Dictionary:
+					continue
+				var item_offers: Array = CardTags.item_offers(under, list_property.name, str(item.get("id", "")))
+				if item_offers.is_empty():
+					continue
+				number += 1
+				var one: PopupMenu = PopupMenu.new()
+				CardTags.fill_offer_menu(one, card, under, item_offers)
+				answers.add_child(one)
+				answers.add_submenu_node_item("%d. %s" % [number, NodePreview.trim(Util.to_label(item.get("text", "")), 40)], one)
+		if number > 0:
+			menu.add_child(answers)
+			menu.add_submenu_node_item(tr("Add a condition to an answer"), answers)
 	if selection.is_empty():
 		menu.id_pressed.connect(func(_offer: int) -> void: _add_node_from(card, at_position))
 		menu.popup_hide.connect(menu.queue_free)
