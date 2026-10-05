@@ -31,6 +31,7 @@ func _ready() -> void:
 	visible = ConfigManager.get_config("show_inspector")
 	_add_close_button()
 	add_to_group(&"inspector_panel")
+	_close_by_dragging_edge.call_deferred()
 
 
 ## × in the corner (russian-monologue): puts the panel away until something else is picked.
@@ -45,6 +46,20 @@ func _add_close_button() -> void:
 
 
 ## Puts the panel away, as × does, until something else is picked.
+## Pulling the panel's edge on to the right, past the narrowest it can be, puts it away; it
+## comes back as wide as it was (russian-monologue).
+func _close_by_dragging_edge() -> void:
+	var split: SplitContainer = get_parent() as SplitContainer
+	if split == null:
+		return
+	var before: Array = [split.split_offset]
+	split.drag_started.connect(func() -> void: before[0] = split.split_offset)
+	split.drag_ended.connect(func() -> void:
+		if visible and get_global_mouse_position().x > global_position.x + 80.0:
+			split.split_offset = before[0]
+			close())
+
+
 func close() -> void:
 	_closed_on = current_objects.duplicate()
 	hide()
