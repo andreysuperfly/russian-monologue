@@ -50,6 +50,7 @@ func _ready() -> void:
 	connection_drag_ended.connect(_flush_deferred_refresh)
 	popup_request.connect(_on_popup_request)
 	gui_input.connect(_on_graph_gui_input)
+	_make_pull_layer()
 
 	add_theme_color_override("activity", ThemeLayout.accent_color)
 	add_to_group(&"monologue_graph")
@@ -631,7 +632,9 @@ func _on_popup_request(at_position: Vector2) -> void:
 ## The card under a point of the graph, or null over empty canvas.
 func _card_at(at_position: Vector2) -> GraphNode:
 	var point: Vector2 = get_global_transform() * at_position
-	for child: Node in get_children():
+	var children: Array[Node] = get_children()
+	children.reverse()  # the one drawn on top, where cards overlap
+	for child: Node in children:
 		if child is GraphNode and (child as GraphNode).visible and (child as GraphNode).get_global_rect().has_point(point):
 			return child as GraphNode
 	return null
@@ -715,6 +718,9 @@ func select_wires(wires: Array[NodeConnection]) -> void:
 ## Caught on the gui_input signal, which Godot emits before GraphEdit's own handling, so
 ## a taken press never reaches the box selection.
 func _on_graph_gui_input(event: InputEvent) -> void:
+	if _pull_wire != null and _on_wire_pull(event):
+		accept_event()
+		return
 	if event.is_action_pressed("mnl_delete") and not _selected_wires.is_empty():
 		_cut_wires(_selected_wires)
 		accept_event()
@@ -743,6 +749,112 @@ func _on_graph_gui_input(event: InputEvent) -> void:
 	select_wires(_picked_with(click, wire))
 	set_selected(null)
 	accept_event()
+	# held and pulled, the wire carries its two cards' join to whatever card it is let go on
+	_pull_wire = wire
+	_pull_from = click.position
+	_pull_to = click.position
+	_pulling = false
+
+
+# ---------- pulling a wire onto a card (russian-monologue) ----------
+# Press on a wire between two cards, pull: a dashed line runs from where it was taken to the
+# pointer, the card under the pointer lights up, and letting go there puts that card between
+# the two (GraphChain, the same as dropping a card onto a wire). One undo step.
+const PULL_START: float = 6.0
+const PULL_OK: Color = Color("#7fa8c9")
+var _pull_wire: NodeConnection
+var _pull_from: Vector2
+var _pull_to: Vector2
+var _pulling: bool = false
+var _pull_card: GraphNode
+var _pull_refused: String = ""
+var _pull_layer: Control
+
+
+func _make_pull_layer() -> void:
+	_pull_layer = Control.new()
+	_pull_layer.name = "WirePull"
+	_pull_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pull_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_pull_layer.z_index = 50
+	_pull_layer.draw.connect(_draw_pull)
+	add_child(_pull_layer, false, Node.INTERNAL_MODE_BACK)
+
+
+## True when the event belonged to a pull (taken, so GraphEdit does not box-select).
+func _on_wire_pull(event: InputEvent) -> bool:
+	var motion: InputEventMouseMotion = event as InputEventMouseMotion
+	if motion:
+		if not _pulling and motion.position.distance_to(_pull_from) < PULL_START:
+			return false
+		_pulling = true
+		_pull_to = motion.position
+		_aim_pull(_card_at(motion.position))
+		_pull_layer.queue_redraw()
+		return true
+	var click: InputEventMouseButton = event as InputEventMouseButton
+	if click == null or click.button_index != MOUSE_BUTTON_LEFT or click.pressed:
+		return false
+	var was_pulling: bool = _pulling
+	if was_pulling:
+		_aim_pull(_card_at(click.position))
+		_let_go_of_pull()
+	_end_pull()
+	return was_pulling
+
+
+func _aim_pull(card: GraphNode) -> void:
+	_pull_card = null
+	_pull_refused = ""
+	if card == null:
+		return
+	var node: InspectableNode = get_node_from_view_name(String(card.name))
+	if node == null:
+		return
+	_pull_card = card
+	_pull_refused = GraphChain.refuse_reason(get_storyline(), node, _pull_wire)
+
+
+func _let_go_of_pull() -> void:
+	if _pull_card == null:
+		return
+	var node: InspectableNode = get_node_from_view_name(String(_pull_card.name))
+	if not _pull_refused.is_empty():
+		Log.info(_pull_refused)
+		return
+	var storyline: StorylineDocument = get_storyline()
+	if node == null or storyline == null or not storyline.connections.has(_pull_wire):
+		return
+	select_wires([])
+	GraphChain._insert(self, storyline, node, _pull_wire)
+	refresh()
+
+
+func _end_pull() -> void:
+	_pull_wire = null
+	_pulling = false
+	_pull_card = null
+	_pull_refused = ""
+	_pull_layer.queue_redraw()
+
+
+func _draw_pull() -> void:
+	if not _pulling:
+		return
+	var colour: Color = PULL_OK if _pull_refused.is_empty() else MARK_RED
+	_pull_layer.draw_dashed_line(_pull_from, _pull_to, colour, 2.0, 8.0)
+	_pull_layer.draw_circle(_pull_from, 4.0, colour)
+	if _pull_card == null or not is_instance_valid(_pull_card):
+		return
+	var rect: Rect2 = Rect2(_pull_card.position, _pull_card.size * zoom).grow(4.0)
+	_pull_layer.draw_rect(rect, colour, false, 2.0)
+	var words: String = tr("Let go — put it here") if _pull_refused.is_empty() else _pull_refused
+	var font: Font = get_theme_default_font()
+	var size: int = 14
+	var width: float = font.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var at: Vector2 = Vector2(rect.position.x, rect.end.y + 8.0)
+	_pull_layer.draw_rect(Rect2(at, Vector2(width + 16.0, 24.0)), colour)
+	_pull_layer.draw_string(font, at + Vector2(8.0, 17.0), words, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color("#10161b"))
 
 
 ## What the picked set becomes. Holding the modifier adds a wire or takes it back out,
