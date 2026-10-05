@@ -125,8 +125,15 @@ func _selection_ids(objects: Array[InspectableObject]) -> PackedStringArray:
 	return ids
 
 
+## The objects the panel was last built for, and how far down it was scrolled: built again for
+## the same ones — an undo, a deleted answer — it stays where it was (russian-monologue).
+var _built_for: Array[InspectableObject] = []
+
+
 func rebuild() -> void:
 	_fields.clear()
+	var scroller: ScrollContainer = field_container.get_parent() as ScrollContainer
+	var keep: int = scroller.scroll_vertical if scroller else 0
 	await get_tree().process_frame
 
 	# Read the selection after the wait, not before. inspect() can run during that frame, and
@@ -179,6 +186,12 @@ func rebuild() -> void:
 		_add_branch_colour(inspected)
 
 	_pending_expand_category = ""
+	var same: bool = inspected == _built_for
+	_built_for = inspected.duplicate()
+	if same and scroller:
+		for _frame: int in 3:
+			await get_tree().process_frame
+			scroller.scroll_vertical = keep
 
 
 ## Under the card's own colour: colour the whole line that runs on from this card, as the

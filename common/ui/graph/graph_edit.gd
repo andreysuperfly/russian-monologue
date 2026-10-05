@@ -109,6 +109,14 @@ func refresh() -> void:
 func refresh_node(node: InspectableNode) -> void:
 	if not node or not is_instance_valid(node.graph_view):
 		return
+	# cards put back by an undo have no view yet: the whole graph is redrawn then, not one card
+	# against wires to cards it cannot see (russian-monologue)
+	var storyline: StorylineDocument = get_storyline()
+	if storyline:
+		for other: InspectableNode in storyline.nodes:
+			if not is_instance_valid(other.graph_view):
+				refresh.call_deferred()
+				return
 
 	if views_are_busy():
 		if node not in _nodes_to_refresh:

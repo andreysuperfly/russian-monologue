@@ -63,6 +63,12 @@ func card_item_tags(_node: InspectableNode, _property: String, _item: Dictionary
 	return []
 
 
+## Why [param node] matters if it were deleted, in a few words ("" when it does not): what
+## it gives, runs or records in the game (russian-monologue). Shown before a branch goes.
+func important_note(_node: InspectableNode) -> String:
+	return ""
+
+
 ## Conditions that can be added to that item: [{"text", "tag"}].
 func card_item_tag_offers(_node: InspectableNode, _property: String, _item: Dictionary) -> Array:
 	return []

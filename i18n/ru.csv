@@ -610,6 +610,16 @@ Add a node…,Добавить узел…
 Add a condition,Добавить условие
 Add a condition to an answer,Добавить условие ответу
 What is checked,что проверять
+changes a variable,меняет переменную
+gives or takes an item,даёт или забирает предмет
+runs a section,запускает раздел
+does something in the game,делает что-то в игре
+%d other place(s) point at it,на неё ссылаются ещё %d мест(а)
+Delete «%s»?,Удалить «%s»?
+After it come %d card(s) nothing else leads to. Cards another way still reaches stay.,"После него идут карточки, в которые больше ничего не ведёт: %d. Карточки, куда ведёт и другой путь, останутся."
+What matters in that branch — click to look:,"Важное в этой ветке — кликните, чтобы посмотреть:"
+Only the answer,Только ответ
+With the branch (%d),Вместе с веткой (%d)
 another check,ещё проверка
 Show the checks,Показать проверки
 Hide the checks,Скрыть проверки

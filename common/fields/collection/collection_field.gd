@@ -219,6 +219,19 @@ func _on_delete_item(index: int) -> void:
 		return
 
 	var item: CollectionItem = get_items()[index]
+	# an answer with a branch after it: the answer alone, or the branch with it (russian-monologue)
+	if _binding.owner is InspectableNode:
+		var said: String = Util.to_label(item.get_property_value("text")) if item.get_property("text") else _describe(item)
+		var asked: bool = BranchCut.ask(self, _binding.owner as InspectableNode, _binding.property.name,
+			str(item.get_property_value("id")), said, _ask_about_referrers.bind(item))
+		if asked:
+			return
+	_ask_about_referrers(item)
+
+
+func _ask_about_referrers(item: CollectionItem) -> void:
+	if not is_instance_valid(item):
+		return
 	var referrers: Array[ReferenceSite] = _referrers_of(item)
 	if referrers.is_empty():
 		_delete_item(item)
