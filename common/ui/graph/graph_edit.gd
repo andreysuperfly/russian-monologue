@@ -51,6 +51,7 @@ func _ready() -> void:
 	popup_request.connect(_on_popup_request)
 	gui_input.connect(_on_graph_gui_input)
 	_make_pull_layer()
+	_make_problem_watch()
 
 	add_theme_color_override("activity", ThemeLayout.accent_color)
 	add_to_group(&"monologue_graph")
@@ -105,6 +106,7 @@ func refresh() -> void:
 
 	_reconnect_all_slots()
 	_repaint_wire_selection()
+	_mark_problems()
 
 
 func refresh_node(node: InspectableNode) -> void:
@@ -1792,3 +1794,64 @@ static func _lay_key(id: String, parents: Dictionary, rank: Dictionary, starts: 
 			if starts[i].get_id() == id:
 				return (1 << 29) + i
 	return best
+
+
+# ---------- problems an add-on reports: marks on the cards, a plaque at the bottom (russian-monologue)
+
+var _problems: Array = []
+var _problem_plaque: Button
+
+
+func _make_problem_watch() -> void:
+	_problem_plaque = Button.new()
+	_problem_plaque.name = "ProblemPlaque"
+	_problem_plaque.visible = false
+	_problem_plaque.focus_mode = Control.FOCUS_NONE
+	_problem_plaque.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_problem_plaque.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 16)
+	_problem_plaque.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_problem_plaque.add_theme_font_size_override(&"font_size", 14)
+	_problem_plaque.pressed.connect(func() -> void: ProblemsWindow.open_for(get_tree().root))
+	add_child(_problem_plaque, false, Node.INTERNAL_MODE_FRONT)
+	var watch: Timer = Timer.new()
+	watch.wait_time = 1.0
+	watch.autostart = true
+	watch.timeout.connect(_mark_problems)
+	add_child(watch, false, Node.INTERNAL_MODE_BACK)
+
+
+func _mark_problems() -> void:
+	if ProjectManager.current_project == null or not is_inside_tree():
+		return
+	var found: Dictionary = ProblemMarks.gather()
+	_problems = found["list"]
+	var storyline: StorylineDocument = get_storyline()
+	if storyline:
+		for node: InspectableNode in storyline.nodes:
+			if is_instance_valid(node.graph_view):
+				ProblemMarks.apply(node.graph_view, node.get_id(), _problems)
+	var line: Dictionary = found["headline"]
+	var text: String = str(line.get("text", ""))
+	if text != _problem_plaque.text or _problem_plaque.visible == text.is_empty():
+		_problem_plaque.text = text
+		_problem_plaque.tooltip_text = str(line.get("tip", ""))
+		_problem_plaque.visible = not text.is_empty()
+		var colour: Color = ProblemMarks.ERROR if line.get("error", false) else ProblemMarks.WARNING
+		var box: StyleBoxFlat = StyleBoxFlat.new()
+		box.bg_color = Color("#1c1c1c").lerp(colour, 0.18)
+		box.border_color = colour
+		box.set_border_width_all(1)
+		box.set_corner_radius_all(8)
+		box.content_margin_left = 12
+		box.content_margin_right = 12
+		box.content_margin_top = 6
+		box.content_margin_bottom = 6
+		var hover: StyleBoxFlat = box.duplicate()
+		hover.bg_color = Color("#1c1c1c").lerp(colour, 0.3)
+		_problem_plaque.add_theme_stylebox_override(&"normal", box)
+		_problem_plaque.add_theme_stylebox_override(&"hover", hover)
+		_problem_plaque.add_theme_stylebox_override(&"pressed", hover)
+		for state: StringName in [&"font_color", &"font_hover_color", &"font_pressed_color"]:
+			_problem_plaque.add_theme_color_override(state, colour.lightened(0.25))
+		_problem_plaque.reset_size()
+		_problem_plaque.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 16)

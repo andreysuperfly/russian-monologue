@@ -74,6 +74,20 @@ func card_item_tag_offers(_node: InspectableNode, _property: String, _item: Dict
 	return []
 
 
+## What is wrong with the open project in the eyes of whatever reads it — a game, say — as
+## [{"error": bool, "message": String, "object_id": the card's node id ("" for none)}]
+## (russian-monologue). A card with one gets a mark, the Problems window lists them. Called
+## about once a second, so read anything slow from a cache.
+func problems() -> Array:
+	return []
+
+
+## One line for the plaque at the bottom of the graph — «the game was not updated: 2 errors» —
+## or "" for none. A click on it opens the Problems window (russian-monologue).
+func problems_headline() -> Dictionary:
+	return {}
+
+
 ## Called on uninstall. Types registered through [param registry] are removed automatically.
 ## Override only for extra teardown.
 func unregister(_registry: MonologueRegistry) -> void:

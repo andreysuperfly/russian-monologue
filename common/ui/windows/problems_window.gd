@@ -184,6 +184,17 @@ func _fill_problems() -> void:
 	var errors_count: int = 0
 	var warnings_count: int = 0
 
+	# what add-ons report first — a game that could not take the story matters most (russian-monologue)
+	for problem: Dictionary in ProblemMarks.gather()["list"]:
+		var bad: bool = problem.get("error", false)
+		if bad:
+			errors_count += 1
+		else:
+			warnings_count += 1
+		var object_id: String = str(problem.get("object_id", ""))
+		_problems_container.add_child(_make_card(bad, str(problem.get("message", "")),
+			_where(project, object_id, "") if not object_id.is_empty() else "", object_id))
+
 	for issue: ValidationIssue in ValidationService.validate_project(project).issues:
 		var is_err: bool = (issue.severity == ValidationIssue.Severity.ERROR)
 		if is_err:
@@ -724,7 +735,11 @@ func _add_row(root: TreeItem, cells: Array, object_id: String) -> void:
 func _where(project: MonologueProject, object_id: String, document_name: String) -> String:
 	var found: Array = _find_node(project, object_id)
 	if not found.is_empty():
-		return "%s · %s" % [(found[0] as StorylineDocument).name, NodePreview.node_label(project, (found[1] as InspectableNode).get_id())]
+		var card: InspectableNode = found[1]
+		var label: String = NodePreview.node_label(project, card.get_id())
+		if label == card.get_id():  # a line has no label of its own: who says what instead of its id
+			label = NodePreview.plain(BranchCut.name_of(card))
+		return "%s · %s" % [(found[0] as StorylineDocument).name, label]
 	for collection: String in ["variables", "items", "characters", "locations"]:
 		for record: Variant in project.get_collection_value(collection):
 			if record is Dictionary and str(record.get("id", "")) == object_id:
