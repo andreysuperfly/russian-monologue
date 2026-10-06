@@ -118,6 +118,11 @@ static func _read_storyline(
 	data: Dictionary,
 	result: ValidationResult
 ) -> void:
+	# the name the storyline keeps inside itself wins over its file's name: a tool that repacked the
+	# archive without the UTF-8 flag turns Cyrillic file names into «╨ö╨▓╨╛╤Ç» (russian-monologue)
+	var own_name: Variant = data.get("name")
+	if own_name is String and not (own_name as String).is_empty():
+		storyline_name = own_name
 	var storyline: StorylineDocument = StorylineDocument.new(
 		storyline_name, project.command_manager
 	)
