@@ -72,6 +72,7 @@ func toggle(objects: Array[InspectableObject]) -> void:
 		close()
 	else:
 		_closed_on = []
+		ConfigManager.set_config("show_inspector", true)
 		inspect(objects)
 
 
@@ -81,8 +82,15 @@ func _on_project_loaded() -> void:
 	command_manager.redone.connect(_on_history_undo_redo)
 
 
-func _on_event_show_inspector(_visible: bool) -> void:
-	inspect(current_objects)
+func _on_event_show_inspector(enabled: bool) -> void:
+	if enabled:
+		_closed_on = []
+		if not current_objects.is_empty():
+			inspect(current_objects)
+		else:
+			show()
+	else:
+		close()
 
 
 ## Re-resolves the inspection stack from the root, replacing stale CollectionItem references

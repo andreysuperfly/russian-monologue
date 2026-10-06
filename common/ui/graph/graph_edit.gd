@@ -183,8 +183,8 @@ var pressed_on_text: bool = false
 signal jumped
 
 
-## One click picks a card, nothing more. A double click on its frame opens its fields on the
-## right; on a line's text it writes the line right there (russian-monologue).
+## One click picks a card, nothing more. A double click opens its fields on the
+## right (russian-monologue).
 func _on_card_input(event: InputEvent, graph_node: GraphNode, node: InspectableNode) -> void:
 	var press: InputEventMouseButton = event as InputEventMouseButton
 	if press == null or not press.pressed or press.button_index != MOUSE_BUTTON_LEFT:
@@ -194,17 +194,15 @@ func _on_card_input(event: InputEvent, graph_node: GraphNode, node: InspectableN
 	get_tree().create_timer(0.3).timeout.connect(func() -> void: pressed_on_text = false)
 	if not press.double_click or node is SectionNode:
 		return
-	var text: Control = graph_node.get_node_or_null(NodePath(GraphNodeViewFactory.PREVIEW_NAME))
-	var on_text: bool = text != null and text.visible and Rect2(text.position, text.size).has_point(press.position)
 	accept_event()
-	if on_text and node.get_type() == "sentence":
-		CardTextEditor.open.call_deferred(graph_node, node)
-		return
+	pressed_on_text = false
+	set_selected(graph_node)
 	var selection: Array[InspectableObject] = [node]
-	# the same double click puts the fields away again (russian-monologue)
-	var panel: Node = get_tree().get_first_node_in_group(&"inspector_panel")
+	ConfigManager.set_config("show_inspector", true)
+	var panel: InspectorPanel = get_tree().get_first_node_in_group(&"inspector_panel") as InspectorPanel
 	if panel:
-		panel.toggle.call_deferred(selection)
+		panel._closed_on = []
+		panel.inspect(selection)
 	else:
 		EventBus.request_objects_inspection.emit.call_deferred(selection)
 

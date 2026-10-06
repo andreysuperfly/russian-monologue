@@ -381,10 +381,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				if _can_trigger_panel_toggle():
 					toggle_side_panels()
 					get_viewport().set_input_as_handled()
-
-
-var _saved_left_open: bool = true
-var _saved_right_open: bool = true
+			elif event.keycode == KEY_ESCAPE:
+				get_viewport().gui_release_focus()
+				get_viewport().set_input_as_handled()
 
 
 func _can_trigger_panel_toggle() -> bool:
@@ -415,9 +414,6 @@ func toggle_side_panels() -> void:
 	var right_is_open: bool = right.visible
 
 	if left_is_open or right_is_open:
-		_saved_left_open = left_is_open
-		_saved_right_open = right_is_open
-
 		ConfigManager.set_config("show_project_explorer", false)
 		left.visible = false
 		EventBus.show_project_explorer.emit(false)
@@ -429,37 +425,33 @@ func toggle_side_panels() -> void:
 			right.visible = false
 		EventBus.show_inspector.emit(false)
 	else:
-		var open_left: bool = _saved_left_open if (_saved_left_open or _saved_right_open) else true
-		var open_right: bool = _saved_right_open if (_saved_left_open or _saved_right_open) else true
+		ConfigManager.set_config("show_project_explorer", true)
+		left.visible = true
+		EventBus.show_project_explorer.emit(true)
 
-		if open_left:
-			ConfigManager.set_config("show_project_explorer", true)
-			left.visible = true
-			EventBus.show_project_explorer.emit(true)
-
-		if open_right:
-			ConfigManager.set_config("show_inspector", true)
-			if right is InspectorPanel:
-				var insp: InspectorPanel = right as InspectorPanel
-				insp._closed_on = []
-				EventBus.show_inspector.emit(true)
-				if not insp.current_objects.is_empty():
-					insp.inspect(insp.current_objects)
-				elif graph_container and graph_container.graph:
-					var selected: Array[InspectableObject] = graph_container.graph.get_selected_nodes()
-					if not selected.is_empty():
-						insp.inspect(selected)
-					else:
-						var storyline: StorylineDocument = graph_container.graph.get_storyline()
-						if storyline:
-							insp.inspect([storyline])
-						else:
-							insp.show()
+		ConfigManager.set_config("show_inspector", true)
+		if right is InspectorPanel:
+			var insp: InspectorPanel = right as InspectorPanel
+			insp._closed_on = []
+			insp.show()
+			EventBus.show_inspector.emit(true)
+			if not insp.current_objects.is_empty():
+				insp.inspect(insp.current_objects)
+			elif graph_container and graph_container.graph:
+				var selected: Array[InspectableObject] = graph_container.graph.get_selected_nodes()
+				if not selected.is_empty():
+					insp.inspect(selected)
 				else:
-					insp.show()
+					var storyline: StorylineDocument = graph_container.graph.get_storyline()
+					if storyline:
+						insp.inspect([storyline])
+					else:
+						insp.show()
 			else:
-				right.visible = true
-				EventBus.show_inspector.emit(true)
+				insp.show()
+		else:
+			right.visible = true
+			EventBus.show_inspector.emit(true)
 
 
 # ---------- where you were (russian-monologue) ----------
