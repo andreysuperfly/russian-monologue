@@ -60,8 +60,9 @@ signal show_console(visible: bool)
 signal show_status_bar(visible: bool)
 signal graph_snap(enabled: bool)
 signal graph_show_grid(visible: bool)
-
 signal expand_text_edit(text_edit: TextEdit)
+signal open_card_dialog(node: InspectableNode)
+signal close_card_dialog
 signal show_dimmer
 signal hide_dimmer
 

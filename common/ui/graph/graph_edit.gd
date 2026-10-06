@@ -183,8 +183,8 @@ var pressed_on_text: bool = false
 signal jumped
 
 
-## One click picks a card, nothing more. A double click opens its fields on the
-## right (russian-monologue).
+## One click picks a card, nothing more. A double click opens its fields in the
+## centered card dialog (russian-monologue).
 func _on_card_input(event: InputEvent, graph_node: GraphNode, node: InspectableNode) -> void:
 	var press: InputEventMouseButton = event as InputEventMouseButton
 	if press == null or not press.pressed or press.button_index != MOUSE_BUTTON_LEFT:
@@ -197,14 +197,7 @@ func _on_card_input(event: InputEvent, graph_node: GraphNode, node: InspectableN
 	accept_event()
 	pressed_on_text = false
 	set_selected(graph_node)
-	var selection: Array[InspectableObject] = [node]
-	ConfigManager.set_config("show_inspector", true)
-	var panel: InspectorPanel = get_tree().get_first_node_in_group(&"inspector_panel") as InspectorPanel
-	if panel:
-		panel._closed_on = []
-		panel.inspect(selection)
-	else:
-		EventBus.request_objects_inspection.emit.call_deferred(selection)
+	EventBus.open_card_dialog.emit(node)
 
 
 func _on_inspectable_node_property_changed(property_name: String, node: InspectableNode) -> void:

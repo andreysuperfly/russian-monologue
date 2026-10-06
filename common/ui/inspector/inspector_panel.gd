@@ -547,12 +547,36 @@ func _apply_category_state(
 	if stored_state is bool:
 		container.folded = stored_state
 	else:
-		container.folded = false
+		var lower: String = category_name.to_lower()
+		if lower in ["game", "игра", "extra", "прочее", "other", "advanced", "playback"]:
+			container.folded = true
+		else:
+			container.folded = false
 
 	if _pending_expand_category == category_name:
 		container.folded = false
 
 	category_states[category_name] = container.folded
+
+
+func focus_line_field() -> void:
+	for _i: int in 3:
+		await get_tree().process_frame
+	var te: TextEdit = _find_first_text_field(field_container)
+	if te:
+		te.grab_focus()
+		te.set_caret_line(te.get_line_count() - 1)
+		te.set_caret_column(te.get_line(te.get_line_count() - 1).length())
+
+
+func _find_first_text_field(root: Node) -> TextEdit:
+	if root is TextEdit and root.visible:
+		return root as TextEdit
+	for child: Node in root.get_children():
+		var found: TextEdit = _find_first_text_field(child)
+		if found:
+			return found
+	return null
 
 
 func _on_property_expose_state_changed(

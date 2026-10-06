@@ -38,6 +38,10 @@ func _on_initialize() -> void:
 	var rows: int = settings.get(PropertySettings.KEY_ROWS, 4)
 	if _is_multiline and not _is_preview:
 		_apply_textarea_height.call_deferred(text_edit, rows)
+		text_edit.add_theme_font_size_override(&"font_size", 16)
+		text_edit.add_theme_constant_override(&"line_spacing", 4)
+		if not text_edit.gui_input.is_connected(_on_multiline_key):
+			text_edit.gui_input.connect(_on_multiline_key)
 
 	if not _is_preview:
 		line_edit.visible = false
@@ -65,14 +69,31 @@ func _on_one_line_key(event: InputEvent) -> void:
 		text_edit.release_focus()
 
 
+func _on_multiline_key(event: InputEvent) -> void:
+	var key: InputEventKey = event as InputEventKey
+	if key and key.pressed and not key.echo:
+		if key.keycode in [KEY_ENTER, KEY_KP_ENTER]:
+			if key.shift_pressed:
+				return  # Shift+Enter adds newline
+			text_edit.accept_event()
+			_write(text_edit.text)
+			emit_value_committed(get_value())
+			text_edit.release_focus()
+			EventBus.close_card_dialog.emit()
+		elif key.keycode == KEY_ESCAPE:
+			text_edit.accept_event()
+			text_edit.release_focus()
+			EventBus.close_card_dialog.emit()
+
+
 func _apply_textarea_height(te: TextEdit, rows: int) -> void:
 	var reset_te: bool = not te.text
 	if reset_te:
 		te.text = " "
 
 	var sb: StyleBox = te.get_theme_stylebox("normal")
-	var padding: float = (sb.content_margin_bottom + sb.content_margin_top) if sb else 8.0
-	te.custom_minimum_size.y = te.get_line_height() * rows + padding
+	var padding: float = (sb.content_margin_bottom + sb.content_margin_top) if sb else 12.0
+	te.custom_minimum_size.y = maxf(120.0, te.get_line_height() * rows + padding)
 
 	if reset_te:
 		te.text = ""

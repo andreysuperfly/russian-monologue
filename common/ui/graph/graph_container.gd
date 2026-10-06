@@ -174,7 +174,9 @@ func request_node_selection(nodes: Array[InspectableObject], skip_history: bool 
 				needs_selection_update = true
 				break
 
-	if not needs_selection_update and inspector_panel.current_objects == nodes:
+	if inspector_panel == null:
+		inspector_panel = get_tree().get_first_node_in_group(&"inspector_panel") as InspectorPanel
+	if not needs_selection_update and inspector_panel and inspector_panel.current_objects == nodes:
 		return
 
 	var history: CommandManager = ProjectManager.current_project.command_manager

@@ -7,7 +7,8 @@ const STORYLINE_EXTENSIONS: Array = ["*.mnlg,*.json;Storyline Document"]
 @export var file_dialog: GlobalFileDialog
 
 @onready var graph_node_picker: GraphNodePicker = %GraphNodePicker
-@onready var inspector_panel_node: InspectorPanel = %Inspector
+@onready var card_dialog: CardDialog = %CardDialog
+@onready var inspector_panel_node: InspectorPanel = %CardDialog.inspector
 @onready var project_panel_node: Control = %ProjectPanel
 
 ## Roughly how far a node's first port sits below its corner. A wire is let go at the
@@ -402,57 +403,32 @@ func _can_trigger_panel_toggle() -> bool:
 	return true
 
 
-## Toggles left (project) and right (inspector) side panels:
+## Toggles left (project) and right/card dialog panels:
 ## If either panel is open, hides both. If both are hidden, restores them.
 func toggle_side_panels() -> void:
 	var left: Control = project_panel_node
-	var right: Control = inspector_panel_node
-	if left == null or right == null:
-		return
-	_hold_graph_in_place()
+	var card_open: bool = card_dialog != null and card_dialog.visible
+	var left_open: bool = left != null and left.visible
 
-	var left_is_open: bool = left.visible
-	var right_is_open: bool = right.visible
-
-	if left_is_open or right_is_open:
+	if left_open or card_open:
 		ConfigManager.set_config("show_project_explorer", false)
-		left.visible = false
+		if left:
+			left.visible = false
 		EventBus.show_project_explorer.emit(false)
 
-		ConfigManager.set_config("show_inspector", false)
-		if right is InspectorPanel:
-			(right as InspectorPanel).close()
-		else:
-			right.visible = false
-		EventBus.show_inspector.emit(false)
+		if card_open:
+			card_dialog.close()
 	else:
 		ConfigManager.set_config("show_project_explorer", true)
-		left.visible = true
+		if left:
+			left.visible = true
 		EventBus.show_project_explorer.emit(true)
 
-		ConfigManager.set_config("show_inspector", true)
-		if right is InspectorPanel:
-			var insp: InspectorPanel = right as InspectorPanel
-			insp._closed_on = []
-			insp.show()
-			EventBus.show_inspector.emit(true)
-			if not insp.current_objects.is_empty():
-				insp.inspect(insp.current_objects)
-			elif graph_container and graph_container.graph:
-				var selected: Array[InspectableObject] = graph_container.graph.get_selected_nodes()
-				if not selected.is_empty():
-					insp.inspect(selected)
-				else:
-					var storyline: StorylineDocument = graph_container.graph.get_storyline()
-					if storyline:
-						insp.inspect([storyline])
-					else:
-						insp.show()
-			else:
-				insp.show()
-		else:
-			right.visible = true
-			EventBus.show_inspector.emit(true)
+		var graph_edit: MonologueGraphEdit = graph_container.graph if graph_container else null
+		if graph_edit and card_dialog:
+			var selected: Array[InspectableObject] = graph_edit.get_selected_nodes()
+			if not selected.is_empty() and selected[0] is InspectableNode:
+				card_dialog.open(selected[0] as InspectableNode)
 
 
 # ---------- where you were (russian-monologue) ----------

@@ -15,10 +15,10 @@
 [ext_resource type="PackedScene" uid="uid://c8525nhvwt1y0" path="res://common/ui/graph/graph_container.tscn" id="9_qd5yd"]
 [ext_resource type="Script" uid="uid://bi4poj4ni2xba" path="res://common/ui/label_memory_usage.gd" id="9_qnluh"]
 [ext_resource type="Script" uid="uid://db0p0vwsnoa06" path="res://common/ui/version_label.gd" id="10_i3ywb"]
-[ext_resource type="PackedScene" uid="uid://dgvhvxdrd58qp" path="res://common/ui/inspector/inspector_panel.tscn" id="14_craj7"]
 [ext_resource type="Script" uid="uid://cd5ku56gijql7" path="res://common/ui/status_bar/status_bar.gd" id="14_ja8tm"]
 [ext_resource type="PackedScene" uid="uid://cmpsaafag7cwl" path="res://common/ui/windows/graph_node_picker/graph_node_picker.tscn" id="15_q62vd"]
 [ext_resource type="PackedScene" uid="uid://c8k4wq2vn7xrm" path="res://common/ui/windows/localization_window/localization_window.tscn" id="16_local"]
+[ext_resource type="PackedScene" path="res://common/ui/windows/card_dialog/card_dialog.tscn" id="17_cdial"]
 
 [sub_resource type="GDScript" id="GDScript_qnluh"]
 script/source = "extends Button
@@ -160,24 +160,11 @@ split_offsets = PackedInt32Array(510)
 split_offset = 510
 script = ExtResource("6_syr16")
 
-[node name="Graph" parent="VBox/MarginContainer/HBoxContainer/HSplitContainer/VSplitContainer" unique_id=116496835 node_paths=PackedStringArray("inspector_panel") instance=ExtResource("9_qd5yd")]
+[node name="Graph" parent="VBox/MarginContainer/HBoxContainer/HSplitContainer/VSplitContainer" unique_id=116496835 instance=ExtResource("9_qd5yd")]
 layout_mode = 2
-inspector_panel = NodePath("../../Inspector")
 
 [node name="Console" parent="VBox/MarginContainer/HBoxContainer/HSplitContainer/VSplitContainer" unique_id=588975871 instance=ExtResource("9_oljq2")]
 layout_mode = 2
-
-[node name="Inspector" parent="VBox/MarginContainer/HBoxContainer/HSplitContainer" unique_id=667809004 instance=ExtResource("14_craj7")]
-unique_name_in_owner = true
-clip_contents = true
-custom_minimum_size = Vector2(320, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"EditorPanel"
-
-[node name="RunButton" parent="VBox/MarginContainer/HBoxContainer/HSplitContainer/Inspector/VBox/Header/SearchBar" parent_id_path=PackedInt32Array(667809004, 711294994) index="2" unique_id=62143223]
-tooltip_text = "Run project from this node"
-theme_type_variation = &"IconButton"
 
 [node name="StatusBar" type="PanelContainer" parent="VBox" unique_id=1614990059]
 custom_minimum_size = Vector2(0, 35)
@@ -230,6 +217,9 @@ content_scale_aspect = 1
 unique_name_in_owner = true
 visible = false
 
+[node name="CardDialog" parent="." unique_id=2081491823 instance=ExtResource("17_cdial")]
+unique_name_in_owner = true
+visible = false
+
 [connection signal="pressed" from="VBox/Header/HBoxContainer/RunButton" to="VBox/Header/HBoxContainer/RunButton" method="_on_pressed"]
 
-[editable path="VBox/MarginContainer/HBoxContainer/HSplitContainer/Inspector"]

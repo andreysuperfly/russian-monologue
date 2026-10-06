@@ -1,0 +1,48 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://common/ui/windows/card_dialog/card_dialog.gd" id="1_cdscr"]
+[ext_resource type="PackedScene" path="res://common/ui/inspector/inspector_panel.tscn" id="2_insp"]
+
+[node name="CardDialog" type="Control" unique_id=2081491823]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_cdscr")
+
+[node name="Dimmer" type="ColorRect" parent="." unique_id=1498172912]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.48)
+
+[node name="Frame" type="PanelContainer" parent="." unique_id=1849182914]
+unique_name_in_owner = true
+clip_contents = true
+custom_minimum_size = Vector2(640, 260)
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -320.0
+offset_top = 60.0
+offset_right = 320.0
+offset_bottom = 320.0
+grow_horizontal = 2
+grow_vertical = 1
+theme_type_variation = &"OuterPanel"
+
+[node name="Inspector" parent="Frame" unique_id=667809004 instance=ExtResource("2_insp")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = null
