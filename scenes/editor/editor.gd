@@ -409,6 +409,7 @@ func toggle_side_panels() -> void:
 	var right: Control = inspector_panel_node
 	if left == null or right == null:
 		return
+	_hold_graph_in_place()
 
 	var left_is_open: bool = left.visible
 	var right_is_open: bool = right.visible
@@ -568,3 +569,17 @@ func _places() -> Dictionary:
 		return {}
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(PLACE_PATH))
 	return parsed if parsed is Dictionary else {}
+
+
+## The left panel going away (or coming back) moves the graph's left edge; the cards stay where
+## they were on the screen instead of jumping with it (russian-monologue).
+func _hold_graph_in_place() -> void:
+	var graph: GraphEdit = graph_container.graph if graph_container else null
+	if graph == null:
+		return
+	var before: float = graph.get_global_rect().position.x
+	# the panels hide now, the containers lay out on the next frames
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if is_instance_valid(graph):
+		graph.scroll_offset.x += graph.get_global_rect().position.x - before
