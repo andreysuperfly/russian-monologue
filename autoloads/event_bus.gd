@@ -55,6 +55,7 @@ signal enable_picker_mode(
 )
 signal show_inspector(visible: bool)
 signal show_project_explorer(visible: bool)
+signal toggle_side_panels
 signal show_console(visible: bool)
 signal show_status_bar(visible: bool)
 signal graph_snap(enabled: bool)

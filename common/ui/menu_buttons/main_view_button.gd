@@ -8,6 +8,10 @@ func _build_menu() -> void:
 		ConfigManager.get_config("show_project_explorer"),
 		_on_show_project_explorer
 	)
+	add_row(
+		"Toggle Side Panels (X)",
+		func() -> void: EventBus.toggle_side_panels.emit()
+	)
 	add_check_row("Show Console", ConfigManager.get_config("show_console"), _on_show_console)
 	add_check_row(
 		"Show Status Bar", ConfigManager.get_config("show_status_bar"), _on_show_status_bar

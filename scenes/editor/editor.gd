@@ -8,6 +8,7 @@ const STORYLINE_EXTENSIONS: Array = ["*.mnlg,*.json;Storyline Document"]
 
 @onready var graph_node_picker: GraphNodePicker = %GraphNodePicker
 @onready var inspector_panel_node: InspectorPanel = %Inspector
+@onready var project_panel_node: Control = %ProjectPanel
 
 ## Roughly how far a node's first port sits below its corner. A wire is let go at the
 ## cursor, so the node is placed above it by this much and the wire lands straight.
@@ -23,6 +24,7 @@ func _ready() -> void:
 	EventBus.add_graph_node.connect(add_node_from_global)
 	EventBus.select_new_node.connect(_select_new_node)
 	EventBus.test_trigger.connect(test_project)
+	EventBus.toggle_side_panels.connect(toggle_side_panels)
 	_keep_clear_of_window_buttons()
 	_drag_window_by_top_bar()
 	_add_history_buttons()
@@ -366,13 +368,98 @@ func _unhandled_input(event: InputEvent) -> void:
 			_walk_history(-1)
 		elif event.button_index == MOUSE_BUTTON_XBUTTON2:
 			_walk_history(1)
-	elif event is InputEventKey and event.pressed and not event.echo and event.is_command_or_control_pressed():
-		if event.keycode == KEY_BRACKETLEFT:
-			_walk_history(-1)
-			get_viewport().set_input_as_handled()
-		elif event.keycode == KEY_BRACKETRIGHT:
-			_walk_history(1)
-			get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.pressed and not event.echo:
+		if event.is_command_or_control_pressed():
+			if event.keycode == KEY_BRACKETLEFT:
+				_walk_history(-1)
+				get_viewport().set_input_as_handled()
+			elif event.keycode == KEY_BRACKETRIGHT:
+				_walk_history(1)
+				get_viewport().set_input_as_handled()
+		elif not event.alt_pressed and not event.shift_pressed:
+			if event.keycode == KEY_X or event.physical_keycode == KEY_X:
+				if _can_trigger_panel_toggle():
+					toggle_side_panels()
+					get_viewport().set_input_as_handled()
+
+
+var _saved_left_open: bool = true
+var _saved_right_open: bool = true
+
+
+func _can_trigger_panel_toggle() -> bool:
+	var focus_owner: Control = get_viewport().gui_get_focus_owner()
+	if focus_owner is LineEdit or focus_owner is TextEdit or focus_owner is CodeEdit:
+		return false
+	if graph_node_picker and graph_node_picker.visible:
+		return false
+	if welcome_window and welcome_window.visible:
+		return false
+	if file_dialog and file_dialog.visible:
+		return false
+	for child: Node in get_tree().root.get_children():
+		if child is Window and child != get_tree().root and (child as Window).visible:
+			return false
+	return true
+
+
+## Toggles left (project) and right (inspector) side panels:
+## If either panel is open, hides both. If both are hidden, restores them.
+func toggle_side_panels() -> void:
+	var left: Control = project_panel_node
+	var right: Control = inspector_panel_node
+	if left == null or right == null:
+		return
+
+	var left_is_open: bool = left.visible
+	var right_is_open: bool = right.visible
+
+	if left_is_open or right_is_open:
+		_saved_left_open = left_is_open
+		_saved_right_open = right_is_open
+
+		ConfigManager.set_config("show_project_explorer", false)
+		left.visible = false
+		EventBus.show_project_explorer.emit(false)
+
+		ConfigManager.set_config("show_inspector", false)
+		if right is InspectorPanel:
+			(right as InspectorPanel).close()
+		else:
+			right.visible = false
+		EventBus.show_inspector.emit(false)
+	else:
+		var open_left: bool = _saved_left_open if (_saved_left_open or _saved_right_open) else true
+		var open_right: bool = _saved_right_open if (_saved_left_open or _saved_right_open) else true
+
+		if open_left:
+			ConfigManager.set_config("show_project_explorer", true)
+			left.visible = true
+			EventBus.show_project_explorer.emit(true)
+
+		if open_right:
+			ConfigManager.set_config("show_inspector", true)
+			if right is InspectorPanel:
+				var insp: InspectorPanel = right as InspectorPanel
+				insp._closed_on = []
+				EventBus.show_inspector.emit(true)
+				if not insp.current_objects.is_empty():
+					insp.inspect(insp.current_objects)
+				elif graph_container and graph_container.graph:
+					var selected: Array[InspectableObject] = graph_container.graph.get_selected_nodes()
+					if not selected.is_empty():
+						insp.inspect(selected)
+					else:
+						var storyline: StorylineDocument = graph_container.graph.get_storyline()
+						if storyline:
+							insp.inspect([storyline])
+						else:
+							insp.show()
+				else:
+					insp.show()
+			else:
+				right.visible = true
+				EventBus.show_inspector.emit(true)
 
 
 # ---------- where you were (russian-monologue) ----------

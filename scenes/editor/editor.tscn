@@ -121,6 +121,7 @@ layout_mode = 2
 theme_type_variation = &"HBoxContainerLarge"
 
 [node name="ProjectPanel" type="PanelContainer" parent="VBox/MarginContainer/HBoxContainer" unique_id=1336539805]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 clip_contents = true
 layout_mode = 2
