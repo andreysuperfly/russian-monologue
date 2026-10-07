@@ -22,9 +22,12 @@ func _ready() -> void:
 
 
 func open(node: InspectableNode) -> void:
+	if _node and _node.property_changed.is_connected(_on_node_changed):
+		_node.property_changed.disconnect(_on_node_changed)
 	_node = node
 	if node == null:
 		return
+	node.property_changed.connect(_on_node_changed)
 
 	visible = true
 	frame.custom_minimum_size.x = 640.0
@@ -111,6 +114,7 @@ func _show_settled() -> void:
 	if not _placed:
 		frame.position = ((screen - frame.size) / 2.0).floor()
 	_keep_on_screen()
+	_put_face()
 	modulate.a = 1.0
 
 
@@ -177,3 +181,57 @@ func _input(event: InputEvent) -> void:
 	if focus:
 		focus.release_focus()
 	close()
+
+
+# ---------- the speaker's face in the line's text (russian-monologue): as on the card, when the
+# character has a portrait; none — the field stays as it is
+
+const FACE: int = 56
+const FACE_NAME: StringName = &"SpeakerFace"
+
+
+func _on_node_changed(property: String) -> void:
+	if property == "speaker" and visible:
+		(func() -> void:
+			await get_tree().process_frame
+			_put_face()).call_deferred()
+
+
+func _line_text() -> TextEdit:
+	for field: Node in inspector.field_container.find_children("*", "", true, false):
+		if field.get(&"_binding") and field._binding.property and field._binding.property.name == "line" and field.get(&"text_edit") is TextEdit:
+			return field.text_edit
+	return null
+
+
+func _put_face() -> void:
+	if _node == null or _node.get_type() != "sentence":
+		return
+	var text: TextEdit = _line_text()
+	if text == null:
+		return
+	var old: Node = text.get_node_or_null(NodePath(FACE_NAME))
+	if old:
+		text.remove_child(old)
+		old.queue_free()
+	for style: StringName in [&"normal", &"focus", &"read_only"]:
+		text.remove_theme_stylebox_override(style)
+	var face: Texture2D = Pictures.of(ProjectManager.current_project, "characters", str(_node.get_property_value("speaker")), FACE)
+	if face == null:
+		return
+	var picture: TextureRect = TextureRect.new()
+	picture.name = FACE_NAME
+	picture.texture = face
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	picture.position = Vector2(10, 10)
+	picture.size = Vector2(FACE, FACE)
+	text.add_child(picture)
+	# the text starts to the right of the face
+	for style: StringName in [&"normal", &"focus", &"read_only"]:
+		var base: StyleBox = text.get_theme_stylebox(style)
+		if base:
+			var room: StyleBox = base.duplicate()
+			room.content_margin_left = maxf(base.content_margin_left, 0.0) + FACE + 14.0
+			text.add_theme_stylebox_override(style, room)
