@@ -409,6 +409,7 @@ func toggle_side_panels() -> void:
 	var left: Control = project_panel_node
 	var card_open: bool = card_dialog != null and card_dialog.visible
 	var left_open: bool = left != null and left.visible
+	_hold_graph_in_place()
 
 	if left_open or card_open:
 		ConfigManager.set_config("show_project_explorer", false)

@@ -14,6 +14,9 @@ func _ready() -> void:
 	dimmer.gui_input.connect(_on_dimmer_gui_input)
 	EventBus.open_card_dialog.connect(open)
 	EventBus.close_card_dialog.connect(close)
+	# the right dock is gone: a collection, a record of one or the languages list asked for from the
+	# project panel or a list field shows here too, or it would load into a hidden window (russian-monologue)
+	EventBus.request_objects_inspection.connect(_on_inspection_requested)
 	inspector.hidden.connect(close)
 	inspector.field_container.resized.connect(_on_fields_resized)
 
@@ -23,7 +26,6 @@ func open(node: InspectableNode) -> void:
 	if node == null:
 		return
 
-	inspector.category_states.clear()
 	visible = true
 	frame.custom_minimum_size.x = 640.0
 	inspector.show()
@@ -31,6 +33,20 @@ func open(node: InspectableNode) -> void:
 	ConfigManager.set_config("show_inspector", true)
 	inspector.inspect([node])
 	inspector.focus_line_field()
+	_update_height()
+
+
+func _on_inspection_requested(objects: Array[InspectableObject]) -> void:
+	if visible or objects.is_empty():
+		return
+	for object: InspectableObject in objects:
+		if not (object is CollectionDocument or object is CollectionItem):
+			return
+	_node = null
+	visible = true
+	frame.custom_minimum_size.x = 640.0
+	inspector.show()
+	inspector._closed_on = []
 	_update_height()
 
 

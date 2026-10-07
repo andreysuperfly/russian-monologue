@@ -363,6 +363,10 @@ func _group_by_category(properties: Array[Property]) -> Dictionary:
 	return groups
 
 
+## Categories that start folded (russian-monologue), in English and as shown in Russian.
+const FOLDED_CATEGORIES: PackedStringArray = ["game", "игра", "extra", "прочее", "other", "advanced", "playback"]
+
+
 func _create_category_section(
 	category_name: String, properties: Array
 ) -> InspectorCategoryContainer:
@@ -375,6 +379,9 @@ func _create_category_section(
 	separator.theme_type_variation = "UltraWideHSeparator"
 	var container: InspectorCategoryContainer = inspector_category_container.instantiate()
 	container.title = category_name
+	# the game's fields and the rarely needed ones start folded: the card window opens on the text
+	if category_name.to_lower() in FOLDED_CATEGORIES or TranslationServer.translate(category_name).to_lower() in FOLDED_CATEGORIES:
+		container.folded = true
 
 	if not is_ghost_section:
 		field_container.add_child(container)
