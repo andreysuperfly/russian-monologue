@@ -53,7 +53,7 @@ func _init() -> void:
 	hide()
 	force_native = true
 	title = "Problems and usages"
-	size = Vector2i(900, 560)
+	size = Vector2i(640, 560)
 	close_requested.connect(hide)
 
 	var background: PanelContainer = PanelContainer.new()
@@ -251,8 +251,22 @@ func _make_card(is_error: bool, message: String, location: String, object_id: St
 	style.set_corner_radius_all(8)
 	style.set_content_margin_all(10)
 	card.add_theme_stylebox_override("panel", style)
+	# the whole card is the link (russian-monologue): one click goes to the place
+	if not object_id.is_empty():
+		var hover: StyleBoxFlat = style.duplicate()
+		hover.bg_color = Color(0.17, 0.17, 0.21)
+		card.mouse_filter = Control.MOUSE_FILTER_STOP
+		card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		card.tooltip_text = tr("Open this place on the graph")
+		card.mouse_entered.connect(func() -> void: card.add_theme_stylebox_override("panel", hover))
+		card.mouse_exited.connect(func() -> void: card.add_theme_stylebox_override("panel", style))
+		card.gui_input.connect(func(event: InputEvent) -> void:
+			if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+				_jump_to_object(object_id)
+		)
 
 	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_theme_constant_override("separation", 6)
 	card.add_child(vbox)
 
@@ -268,26 +282,12 @@ func _make_card(is_error: bool, message: String, location: String, object_id: St
 	msg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_child(msg)
 
-	var bottom_row: HBoxContainer = HBoxContainer.new()
-	bottom_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vbox.add_child(bottom_row)
-
 	var loc_label: Label = Label.new()
 	loc_label.text = location
 	loc_label.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65))
 	loc_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	loc_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	bottom_row.add_child(loc_label)
-
-	var link_btn: Button = Button.new()
-	link_btn.flat = true
-	link_btn.text = tr("Go to →")
-	link_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	if not object_id.is_empty():
-		link_btn.pressed.connect(_jump_to_object.bind(object_id))
-	else:
-		link_btn.visible = false
-	bottom_row.add_child(link_btn)
+	vbox.add_child(loc_label)
 
 	return card
 
@@ -576,13 +576,6 @@ func _make_usage_card(entry: Dictionary) -> PanelContainer:
 	what.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45))
 	what.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(what)
-
-	var open_button: Button = Button.new()
-	open_button.text = tr("Show on the graph →")
-	open_button.focus_mode = Control.FOCUS_NONE
-	open_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	open_button.pressed.connect(_jump_to_object.bind(object_id))
-	hbox.add_child(open_button)
 
 	return card
 
