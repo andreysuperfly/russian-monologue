@@ -249,7 +249,7 @@ T.update({
 "port reference":"ссылка","port list":"список","port collection":"список","port audio":"звук","port file":"файл",
 "context":"ход","Context":"Ход",
 # меню и окна
-"Run":"Запуск","Show Inspector":"Показать панель свойств","Show Project Explorer":"Показать панель проекта","Toggle Side Panels (X)":"Боковые панели (X)",
+"Run":"Запуск","Show Inspector":"Показать панель свойств","Show Project Explorer":"Показать панель проекта","Toggle Side Panels (X)":"Боковые панели (X)","Click to change the portrait":"Нажмите, чтобы сменить портрет",
 "Zoom to selection":"Показать выделенное","Regenerate theme":"Обновить тему","Open Localization Utility":"Открыть перевод",
 "Untranslated only":"Только без перевода","Check":"Проверить","Was at":"Уже проходил","was at":"уже проходил",
 "shown if":"показан, если","Join":"Выходит на сцену","Leave":"Уходит со сцены","Reroute":"Точка изгиба",

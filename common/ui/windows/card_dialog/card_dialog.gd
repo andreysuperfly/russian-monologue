@@ -171,7 +171,18 @@ func _input(event: InputEvent) -> void:
 		return
 	var focus: Control = get_viewport().gui_get_focus_owner()
 	if focus is TextEdit and frame.is_ancestor_of(focus):
-		return  # its field takes the text and closes the window itself
+		# its text field takes the text and closes the window — also a one-row text field, whose own
+		# Enter handler is not hooked up (only text areas get it)
+		var field: Node = focus.get_parent()
+		while field and field != frame and not field.has_method(&"_on_multiline_key"):
+			field = field.get_parent()
+		get_viewport().set_input_as_handled()
+		if field and field != frame and field.get(&"text_edit") == focus:
+			field._on_multiline_key(key)
+		else:
+			focus.release_focus()
+		close()
+		return
 	if focus is LineEdit and focus.name == &"SearchBar":
 		return
 	if focus is LineEdit and frame.is_ancestor_of(focus):
@@ -224,7 +235,11 @@ func _put_face() -> void:
 	picture.texture = face
 	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# a click on the face picks another picture for the character: here, on every card, in the game
+	picture.mouse_filter = Control.MOUSE_FILTER_STOP
+	picture.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	picture.tooltip_text = TranslationServer.translate("Click to change the portrait")
+	picture.gui_input.connect(_on_face_input)
 	picture.position = Vector2(10, 10)
 	picture.size = Vector2(FACE, FACE)
 	text.add_child(picture)
@@ -235,3 +250,46 @@ func _put_face() -> void:
 			var room: StyleBox = base.duplicate()
 			room.content_margin_left = maxf(base.content_margin_left, 0.0) + FACE + 14.0
 			text.add_theme_stylebox_override(style, room)
+
+
+func _on_face_input(event: InputEvent) -> void:
+	var click: InputEventMouseButton = event as InputEventMouseButton
+	if click == null or not click.pressed or click.button_index != MOUSE_BUTTON_LEFT:
+		return
+	get_viewport().set_input_as_handled()
+	var project: MonologueProject = ProjectManager.current_project
+	var root_dir: String = project.project_path.get_base_dir() if project and not project.project_path.is_empty() else ""
+	var options: Array[Dictionary] = []
+	EventBus.open_file_request.emit(_on_face_picked, PackedStringArray(["*.png", "*.jpg", "*.jpeg", "*.webp"]), root_dir, options)
+
+
+## The picture becomes the speaker's default portrait (one undo step); a project with a game next
+## to it carries it over to the game on save.
+func _on_face_picked(absolute_path: String) -> void:
+	var project: MonologueProject = ProjectManager.current_project
+	if project == null or _node == null or absolute_path.is_empty():
+		return
+	var image: String = PathUtil.absolute_to_relative(absolute_path, project.project_path) if not project.project_path.is_empty() else absolute_path
+	var speaker: String = str(_node.get_property_value("speaker"))
+	var characters: CollectionDocument = project.get_collection("characters")
+	if characters == null or speaker.is_empty():
+		return
+	var records: Array = characters.get_value().duplicate(true)
+	for record: Variant in records:
+		if not (record is Dictionary and str(record.get("id", "")) == speaker):
+			continue
+		var faces: Array = record.get("portraits", [])
+		var face: Variant = null
+		for candidate: Variant in faces:
+			if candidate is Dictionary and candidate.get("is_default", false):
+				face = candidate
+		if face == null and not faces.is_empty():
+			face = faces[0]
+		if face == null:
+			return
+		face["image"] = image
+	characters.set_property_value(characters.name, records)
+	_put_face()
+	var graph: Node = get_tree().get_first_node_in_group(&"monologue_graph")
+	if graph and graph.has_method(&"refresh"):
+		graph.refresh()
