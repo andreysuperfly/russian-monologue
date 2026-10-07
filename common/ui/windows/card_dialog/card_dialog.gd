@@ -6,7 +6,6 @@ extends Control
 @onready var inspector: InspectorPanel = %Inspector
 
 var _node: InspectableNode
-var _target_height: float = 0.0
 
 
 func _ready() -> void:
@@ -19,6 +18,7 @@ func _ready() -> void:
 	EventBus.request_objects_inspection.connect(_on_inspection_requested)
 	inspector.hidden.connect(close)
 	inspector.field_container.resized.connect(_on_fields_resized)
+	frame.gui_input.connect(_on_frame_gui_input)
 
 
 func open(node: InspectableNode) -> void:
@@ -33,7 +33,7 @@ func open(node: InspectableNode) -> void:
 	ConfigManager.set_config("show_inspector", true)
 	inspector.inspect([node])
 	inspector.focus_line_field()
-	_update_height()
+	_show_settled()
 
 
 func _on_inspection_requested(objects: Array[InspectableObject]) -> void:
@@ -47,7 +47,7 @@ func _on_inspection_requested(objects: Array[InspectableObject]) -> void:
 	frame.custom_minimum_size.x = 640.0
 	inspector.show()
 	inspector._closed_on = []
-	_update_height()
+	_show_settled()
 
 
 func close() -> void:
@@ -79,23 +79,76 @@ func _on_fields_resized() -> void:
 	_update_height()
 
 
-func _update_height() -> void:
-	if not visible or not is_inside_tree():
-		return
-	await get_tree().process_frame
-	if not visible or not is_instance_valid(inspector):
-		return
+# ---------- size and place (russian-monologue): the window opens whole, in the middle of the
+# screen, no growing from the bottom; it can be dragged by its top strip and edges, and keeps the
+# place it was dragged to; a section unfolding makes it longer downwards at once
 
+var _placed: bool = false
+var _dragging: bool = false
+const MARGIN: float = 16.0
+
+
+func _desired_height() -> float:
 	var vp_h: float = get_viewport_rect().size.y
-	var max_h: float = maxf(320.0, vp_h * 0.82)
 	var header_node: Control = inspector.get_node_or_null(^"VBox/Header") as Control
 	var header_h: float = header_node.size.y if header_node else 50.0
 	var fields_h: float = inspector.field_container.get_combined_minimum_size().y
-	var desired_h: float = clampf(fields_h + header_h + 36.0, 260.0, max_h)
+	return clampf(fields_h + header_h + 36.0, 260.0, maxf(320.0, vp_h * 0.86))
 
-	if absf(desired_h - _target_height) > 4.0:
-		_target_height = desired_h
-		var tween: Tween = create_tween()
-		tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		tween.tween_property(frame, "custom_minimum_size:y", desired_h, 0.22)
-		tween.parallel().tween_property(frame, "size:y", desired_h, 0.22)
+
+## Opens hidden for two frames while the fields are laid out, then shows at its full size.
+func _show_settled() -> void:
+	modulate.a = 0.0
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not visible:
+		return
+	frame.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	var h: float = _desired_height()
+	frame.custom_minimum_size = Vector2(640.0, h)
+	frame.size = Vector2(640.0, h)
+	var screen: Vector2 = get_viewport_rect().size
+	if not _placed:
+		frame.position = ((screen - frame.size) / 2.0).floor()
+	_keep_on_screen()
+	modulate.a = 1.0
+
+
+func _update_height() -> void:
+	if not visible or not is_inside_tree() or modulate.a < 1.0:
+		return
+	await get_tree().process_frame
+	if not visible:
+		return
+	var h: float = _desired_height()
+	if absf(h - frame.size.y) > 2.0:
+		frame.custom_minimum_size.y = h
+		frame.size.y = h
+		_keep_on_screen()
+
+
+func _keep_on_screen() -> void:
+	var screen: Vector2 = get_viewport_rect().size
+	frame.position.x = clampf(frame.position.x, MARGIN - frame.size.x + 120.0, screen.x - 120.0)
+	frame.position.y = clampf(frame.position.y, MARGIN, maxf(MARGIN, screen.y - frame.size.y - MARGIN))
+
+
+func _on_frame_gui_input(event: InputEvent) -> void:
+	var press: InputEventMouseButton = event as InputEventMouseButton
+	if press and press.button_index == MOUSE_BUTTON_LEFT:
+		if press.pressed:
+			# the top strip (search row and the id under it) and the window's own edges move it
+			var header_node: Control = inspector.get_node_or_null(^"VBox/Header") as Control
+			var top: float = (header_node.get_global_rect().end.y - frame.global_position.y) if header_node else 90.0
+			_dragging = press.position.y <= top + 6.0 or press.position.x < 14.0 or press.position.x > frame.size.x - 14.0 or press.position.y > frame.size.y - 14.0
+		else:
+			_dragging = false
+		if _dragging:
+			frame.accept_event()
+		return
+	var motion: InputEventMouseMotion = event as InputEventMouseMotion
+	if motion and _dragging:
+		frame.position += motion.relative
+		_placed = true
+		_keep_on_screen()
+		frame.accept_event()
