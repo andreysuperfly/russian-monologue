@@ -152,3 +152,28 @@ func _on_frame_gui_input(event: InputEvent) -> void:
 		_placed = true
 		_keep_on_screen()
 		frame.accept_event()
+
+
+## Enter closes the card window wherever it is pressed in it — a one-line field (its value taken
+## first), a list, nothing focused at all; Shift+Enter stays a new line, the search keeps searching.
+## A text area does the same in its own field (russian-monologue).
+func _input(event: InputEvent) -> void:
+	if not visible or modulate.a < 1.0:
+		return
+	var key: InputEventKey = event as InputEventKey
+	if key == null or not key.pressed or key.echo or key.shift_pressed:
+		return
+	if key.keycode != KEY_ENTER and key.keycode != KEY_KP_ENTER:
+		return
+	var focus: Control = get_viewport().gui_get_focus_owner()
+	if focus is TextEdit and frame.is_ancestor_of(focus):
+		return  # its field takes the text and closes the window itself
+	if focus is LineEdit and focus.name == &"SearchBar":
+		return
+	if focus is LineEdit and frame.is_ancestor_of(focus):
+		close.call_deferred()  # after the line edit has taken the value
+		return
+	get_viewport().set_input_as_handled()
+	if focus:
+		focus.release_focus()
+	close()

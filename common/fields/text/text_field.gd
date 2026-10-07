@@ -75,9 +75,6 @@ func _on_multiline_key(event: InputEvent) -> void:
 		if key.keycode in [KEY_ENTER, KEY_KP_ENTER]:
 			if key.shift_pressed:
 				return  # Shift+Enter adds newline
-			# only a line's own text closes the card window on Enter; elsewhere Enter is a new line
-			if not (_binding and _binding.property and _binding.property.name == "line"):
-				return
 			text_edit.accept_event()
 			_write(text_edit.text)
 			emit_value_committed(get_value())
