@@ -1,6 +1,8 @@
 @abstract
 class_name Field extends VBoxContainer
 
+const SearchDropdown = preload("res://common/ui/search_dropdown.gd")
+
 ## Every keystroke, drag and slider move. Nothing is persisted and no undo entry is made.
 ## FieldBinding uses it for live validation only.
 signal value_changed(new_value: Variant)
@@ -96,6 +98,7 @@ static func fit_dropdown(button: OptionButton) -> void:
 	button.fit_to_longest_item = false
 	button.clip_text = true
 	button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	SearchDropdown.attach(button)
 
 
 @abstract func set_value(value: Variant) -> void

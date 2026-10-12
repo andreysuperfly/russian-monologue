@@ -93,6 +93,7 @@ static func _narrow(box: OptionButton) -> OptionButton:
 	box.fit_to_longest_item = false
 	box.custom_minimum_size.x = 40
 	box.size_flags_horizontal = SIZE_EXPAND_FILL
+	Field.SearchDropdown.attach(box)
 	return box
 
 
