@@ -92,7 +92,8 @@ func _draw() -> void:
 			_spot(origin, zoom, wire[0]) + middle,
 			_spot(origin, zoom, wire[1]) + middle,
 			Color(MonologuePalette.FLOW, 0.25),
-			1.0
+			1.0,
+			true
 		)
 
 	for index: int in _marks.size():

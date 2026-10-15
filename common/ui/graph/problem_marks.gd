@@ -54,8 +54,8 @@ static func _draw(graph_node: GraphNode) -> void:
 	var bad: bool = own.any(func(p: Dictionary) -> bool: return p.get("error", false))
 	var colour: Color = ERROR if bad else WARNING
 	var centre: Vector2 = Vector2(graph_node.size.x - 2.0, 2.0)
-	graph_node.draw_circle(centre, RADIUS + 2.0, Color("#161616"))
-	graph_node.draw_circle(centre, RADIUS, colour)
+	graph_node.draw_circle(centre, RADIUS + 2.0, Color("#161616"), true, -1.0, true)
+	graph_node.draw_circle(centre, RADIUS, colour, true, -1.0, true)
 	var font: Font = graph_node.get_theme_default_font()
 	var mark: String = "!" if own.size() == 1 else str(own.size())
 	var size: int = 14

@@ -229,8 +229,8 @@ static func light(node: InspectableNode) -> Control:
 			dot.draw_arc(centre, 4.0, 0.0, TAU, 24, colour, 1.5, true)
 		else:
 			if any:
-				dot.draw_circle(centre, 7.0, Color(colour, 0.18))
-			dot.draw_circle(centre, 4.0, colour))
+				dot.draw_circle(centre, 7.0, Color(colour, 0.18), true, -1.0, true)
+			dot.draw_circle(centre, 4.0, colour, true, -1.0, true))
 	if not any:
 		dot.tooltip_text = TranslationServer.translate("No checks on this card. A right click adds one.")
 		return dot

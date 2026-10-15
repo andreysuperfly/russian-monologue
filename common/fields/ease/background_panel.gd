@@ -45,7 +45,10 @@ func _draw() -> void:
 	draw_circle(
 		Vector2(_eased_at(points, _ball_progress) * size.x, size.y * 0.5),
 		12.0,
-		Color("ffffff3f")
+		Color("ffffff3f"),
+		true,
+		-1.0,
+		true
 	)
 
 

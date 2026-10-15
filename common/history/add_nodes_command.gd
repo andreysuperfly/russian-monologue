@@ -24,7 +24,7 @@ func execute() -> void:
 	for connection: NodeConnection in _removed_connections:
 		storyline.add_connection(connection)
 	_removed_connections.clear()
-	EventBus.refresh_graph.emit()
+	EventBus.refresh_graph_cards.emit()
 
 
 func undo() -> void:
@@ -35,7 +35,7 @@ func undo() -> void:
 	_removed_connections.clear()
 	for node: InspectableNode in nodes:
 		_removed_connections.append_array(storyline.remove_node(node))
-	EventBus.refresh_graph.emit()
+	EventBus.refresh_graph_cards.emit()
 
 
 func get_description() -> String:

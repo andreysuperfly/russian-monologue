@@ -81,7 +81,7 @@ func execute() -> void:
 		EventBus.storyline_deleted.emit()
 		EventBus.storylines_changed.emit()
 		project.content_changed.emit()
-	EventBus.refresh_graph.emit()
+	EventBus.refresh_graph_cards.emit()
 
 
 func undo() -> void:
@@ -104,7 +104,7 @@ func undo() -> void:
 		project.observe_storylines()
 		EventBus.storylines_changed.emit()
 		project.content_changed.emit()
-	EventBus.refresh_graph.emit()
+	EventBus.refresh_graph_cards.emit()
 
 
 func get_description() -> String:

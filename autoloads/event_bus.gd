@@ -7,6 +7,8 @@ signal test_trigger
 ## The project's active language changed. Everything showing translated text redraws.
 signal language_changed(code: String)
 signal refresh_graph
+## Cards were added or taken away; the graph builds only those and their neighbours.
+signal refresh_graph_cards
 signal add_graph_node(descriptor_name: String, window: Window)
 ## Selections travel as Array[InspectableObject] everywhere, even when they only hold
 ## nodes: GDScript typed arrays are invariant, so mixing the two element types means a

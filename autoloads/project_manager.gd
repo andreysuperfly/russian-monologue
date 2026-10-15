@@ -306,6 +306,7 @@ func _remember_disk(project: MonologueProject, fingerprint: String, documents: D
 	_base = documents if not documents.is_empty() else _documents_of(project)
 	_seen_print = ""
 	_unreadable = ""
+	_stat_key = ""  # our own write: the next look reads the file afresh
 
 
 static func _documents_of(project: MonologueProject) -> Dictionary:
@@ -313,13 +314,54 @@ static func _documents_of(project: MonologueProject) -> Dictionary:
 
 
 ## The fingerprint on disk, when it is not the one read or written here last; "" otherwise.
+## Size and time of change of the file, or of every file in the folder: cheap to ask each second.
+static func disk_stat(path: String) -> String:
+	if FileAccess.file_exists(path):
+		return "%d:%d" % [FileAccess.get_modified_time(path), FileAccess.get_size(path)]
+	if not DirAccess.dir_exists_absolute(path):
+		return ""
+	var parts: PackedStringArray = []
+	var pending: PackedStringArray = [path]
+	while not pending.is_empty():
+		var folder: String = pending[pending.size() - 1]
+		pending.remove_at(pending.size() - 1)
+		for sub: String in DirAccess.get_directories_at(folder):
+			if not sub.begins_with("."):
+				pending.append(folder.path_join(sub))
+		for file: String in DirAccess.get_files_at(folder):
+			if not file.begins_with("."):
+				var full: String = folder.path_join(file)
+				parts.append("%s=%d:%d" % [full, FileAccess.get_modified_time(full), FileAccess.get_size(full)])
+	parts.sort()
+	return "\n".join(parts)
+
+
+var _stat_key: String = ""
+var _stat_print: String = ""
+var _stat_at: int = 0
+
+
+## The fingerprint, read again only when size or time moved (russian-monologue) — before, the
+## whole project was read and hashed every second. Every 10 s it is read anyway: the time of
+## change counts in whole seconds, and a same-size write within one would hide.
+func _disk_print_cheap(path: String) -> String:
+	var key: String = disk_stat(path)
+	var now: int = Time.get_ticks_msec()
+	if key == _stat_key and now - _stat_at < 10000:
+		return _stat_print
+	_stat_key = key
+	_stat_print = disk_print(path)
+	_stat_at = now
+	return _stat_print
+
+
 func _changed_on_disk() -> String:
 	var project: MonologueProject = current_project
 	if project == null or project.project_path.is_empty() or project.project_path != _disk_path:
 		return ""
 	if _disk_print.is_empty():
 		return ""
-	var now: String = disk_print(project.project_path)
+	var now: String = _disk_print_cheap(project.project_path)
 	if now.is_empty() or now == _disk_print or now == _unreadable:
 		return ""
 	return now

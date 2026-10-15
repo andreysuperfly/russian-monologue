@@ -44,6 +44,7 @@ func _ready() -> void:
 	MonologueRegistry.get_instance().apply_connection_types(self)
 
 	EventBus.refresh_graph.connect(refresh)
+	EventBus.refresh_graph_cards.connect(refresh_cards)
 	# Every preview on the canvas is written in the active language, so a change of
 	# language is a change of what every node says.
 	EventBus.language_changed.connect(_on_language_changed)
@@ -75,6 +76,83 @@ func get_storyline() -> StorylineDocument:
 	return ProjectManager.current_project.get_storyline(storyline_id)
 
 
+## Cards added or taken away (russian-monologue): only those cards and the ones wired to them
+## are built again, the rest of the canvas stays. A whole rebuild of a big dialogue took about
+## a third of a second on every add, delete and undo.
+func refresh_cards() -> void:
+	if views_are_busy():
+		_refresh_deferred = true
+		return
+	var storyline: StorylineDocument = get_storyline()
+	if storyline == null or connection_manager == null or _built_for != storyline.id:
+		refresh()
+		return
+
+	var model: Dictionary = {}
+	for node: InspectableNode in storyline.nodes:
+		model[node.get_id()] = node
+	var touched: Dictionary = {}
+	var canvas_ends: Dictionary = {}  # view name -> names wired to it on the canvas
+	for c: Dictionary in get_connection_list():
+		var a: String = String(c["from_node"])
+		var b: String = String(c["to_node"])
+		canvas_ends.get_or_add(a, []).append(b)
+		canvas_ends.get_or_add(b, []).append(a)
+	for wire: Array in _back_wires:
+		if is_instance_valid(wire[0]) and is_instance_valid(wire[2]):
+			var a: String = String((wire[0] as Node).name)
+			var b: String = String((wire[2] as Node).name)
+			canvas_ends.get_or_add(a, []).append(b)
+			canvas_ends.get_or_add(b, []).append(a)
+
+	# gone: cards whose node left the storyline (or was replaced)
+	for view: GraphNode in get_all_graph_nodes():
+		var name: String = String(view.name)
+		var node: InspectableNode = model.get(name)
+		if node != null and node.graph_view == view:
+			continue
+		for other: String in canvas_ends.get(name, []):
+			touched[other] = true
+		_node_map.erase(view)
+		_pending_positions.erase(view)
+		remove_child(view)
+		view.queue_free()
+
+	# new: nodes without a card on the canvas
+	var added: Dictionary = {}
+	for node: InspectableNode in storyline.nodes:
+		if is_instance_valid(node.graph_view) and node.graph_view.get_parent() == self:
+			continue
+		add_graph_node_view(node)
+		added[node.get_id()] = true
+	for wire: NodeConnection in storyline.connections:
+		if added.has(wire.from_node_id):
+			touched[wire.to_node_id] = true
+		if added.has(wire.to_node_id):
+			touched[wire.from_node_id] = true
+
+	# a jump names its target on the card; the target may be the one that went or came back
+	for node: InspectableNode in storyline.nodes:
+		if node is JumpNode:
+			touched[node.get_id()] = true
+
+	clear_connections()
+	for id: String in touched:
+		var node: InspectableNode = model.get(id)
+		if node == null or added.has(id) or not is_instance_valid(node.graph_view):
+			continue
+		GraphNodeViewFactory.apply_metadata(node.graph_view, node)
+		GraphNodeViewFactory.populate(node.graph_view, node)
+	_ports_begin()
+	_reconnect_all_slots()
+	_repaint_wire_selection()
+	_ports_end()
+	_mark_problems()
+
+
+var _built_for: String = ""
+
+
 func refresh() -> void:
 	if views_are_busy():
 		_refresh_deferred = true
@@ -83,6 +161,7 @@ func refresh() -> void:
 	var storyline: StorylineDocument = get_storyline()
 	if not storyline:
 		return
+	_built_for = storyline.id
 
 	if not connection_manager:
 		connection_manager = ConnectionManager.new(storyline)
@@ -104,8 +183,10 @@ func refresh() -> void:
 	for node: InspectableNode in storyline.nodes:
 		add_graph_node_view(node)
 
+	_ports_begin()
 	_reconnect_all_slots()
 	_repaint_wire_selection()
+	_ports_end()
 	_mark_problems()
 
 
@@ -130,8 +211,10 @@ func refresh_node(node: InspectableNode) -> void:
 	GraphNodeViewFactory.apply_metadata(node.graph_view, node)
 	GraphNodeViewFactory.populate(node.graph_view, node)
 	_sync_position_from_property(node)
+	_ports_begin()
 	_reconnect_all_slots()
 	_repaint_wire_selection()
+	_ports_end()
 
 
 func add_graph_node_view(node: InspectableNode) -> GraphNode:
@@ -392,6 +475,23 @@ func _do_flush_deferred_refresh() -> void:
 		refresh_node(node as InspectableNode)
 
 
+var _port_cache: Dictionary = {}
+var _port_cache_depth: int = 0
+
+
+## Port lookups in between are cached; nothing in the model may change until [method _ports_end].
+func _ports_begin() -> void:
+	if _port_cache_depth == 0:
+		_port_cache.clear()
+	_port_cache_depth += 1
+
+
+func _ports_end() -> void:
+	_port_cache_depth = maxi(0, _port_cache_depth - 1)
+	if _port_cache_depth == 0:
+		_port_cache.clear()
+
+
 func get_all_graph_nodes() -> Array:
 	return get_children().filter(func(child: Node) -> bool: return child is GraphNode)
 
@@ -399,7 +499,12 @@ func get_all_graph_nodes() -> Array:
 func _reconnect_all_slots() -> void:
 	if not connection_manager:
 		return
+	_ports_begin()
+	_reconnect_all_slots_now()
+	_ports_end()
 
+
+func _reconnect_all_slots_now() -> void:
 	var storyline: StorylineDocument = get_storyline()
 	var all_connections: Array[Dictionary] = connection_manager.get_all_connections()
 	_back_wires.clear()
@@ -450,6 +555,32 @@ func _get_visible_properties(node: InspectableNode) -> Array[Property]:
 func get_port_index_for_property(
 	node_name: String, property_name: String, is_output: bool = false
 ) -> int:
+	# inside a batch pass the ports of a card are worked out once (russian-monologue): building
+	# a card's rows looks through every wire, and a pass asks twice per wire — that was what made
+	# a rebuild, a pick and every edit slow on a big dialogue
+	if _port_cache_depth > 0:
+		var both: Variant = _port_cache.get(node_name)
+		if both == null:
+			var outs: Dictionary = {}
+			var ins: Dictionary = {}
+			var cached_node: InspectableNode = get_node_from_view_name(node_name)
+			if cached_node:
+				for row: GraphNodeRow in GraphNodeViewFactory._build_rows(cached_node):
+					var connection_name: String = row.get_connection_name()
+					if row._enable_right_port:
+						if not outs.has(connection_name):
+							outs[connection_name] = outs.size()
+						else:
+							outs[" %d" % outs.size()] = outs.size()  # keeps the count right for a repeated name
+					if row._enable_left_port:
+						if not ins.has(connection_name):
+							ins[connection_name] = ins.size()
+						else:
+							ins[" %d" % ins.size()] = ins.size()
+			both = [outs, ins]
+			_port_cache[node_name] = both
+		return ((both as Array)[0 if is_output else 1] as Dictionary).get(property_name, -1)
+
 	var node: InspectableNode = get_node_from_view_name(node_name)
 	if not node:
 		return -1
@@ -469,6 +600,10 @@ func get_port_index_for_property(
 
 func get_node_from_view_name(graph_view_name: String) -> InspectableNode:
 	var storyline: StorylineDocument = get_storyline()
+	# a view is named by its node's id, so the index answers at once; the walk stays for the odd one
+	var direct: InspectableNode = storyline.get_node(graph_view_name)
+	if direct != null and is_instance_valid(direct.graph_view) and String(direct.graph_view.name) == graph_view_name:
+		return direct
 
 	for node: InspectableNode in storyline.nodes:
 		if node.graph_view.name == graph_view_name:
@@ -894,8 +1029,8 @@ func _draw_pull() -> void:
 	if not _pulling:
 		return
 	var colour: Color = PULL_OK if _pull_refused.is_empty() else MARK_RED
-	_pull_layer.draw_dashed_line(_pull_from, _pull_to, colour, 2.0, 8.0)
-	_pull_layer.draw_circle(_pull_from, 4.0, colour)
+	_pull_layer.draw_dashed_line(_pull_from, _pull_to, colour, 2.0, 8.0, true, true)
+	_pull_layer.draw_circle(_pull_from, 4.0, colour, true, -1.0, true)
 	if _pull_card == null or not is_instance_valid(_pull_card):
 		return
 	var rect: Rect2 = Rect2(_pull_card.position, _pull_card.size * zoom)
@@ -978,12 +1113,18 @@ func _paint_picked_cards_wires() -> void:
 	var picked: Dictionary = {}
 	for name: StringName in _selected_view_names():
 		picked[String(name)] = true
+	# the wires on the canvas, once — asking the canvas per wire walks its whole list each time
+	var drawn: Dictionary = {}
+	for c: Dictionary in get_connection_list():
+		drawn["%s|%d|%s|%d" % [c["from_node"], c["from_port"], c["to_node"], c["to_port"]]] = true
+	_ports_begin()
 	for wire: NodeConnection in storyline.connections:
 		var lit: bool = picked.has(wire.from_node_id) or picked.has(wire.to_node_id) or _selected_wires.has(wire)
 		var from_port: int = get_port_index_for_property(wire.from_node_id, wire.get_from_name(), true)
 		var to_port: int = get_port_index_for_property(wire.to_node_id, wire.get_to_name(), false)
-		if from_port >= 0 and to_port >= 0 and is_node_connected(wire.from_node_id, from_port, wire.to_node_id, to_port):
+		if from_port >= 0 and to_port >= 0 and drawn.has("%s|%d|%s|%d" % [wire.from_node_id, from_port, wire.to_node_id, to_port]):
 			set_connection_activity(wire.from_node_id, from_port, wire.to_node_id, to_port, 1.0 if lit else 0.0)
+	_ports_end()
 
 
 ## Wires named by both their ends, so the ones aimed at are the ones that go even when
@@ -1505,7 +1646,10 @@ func _dashed_arc(start: Vector2, end: Vector2, colour: Color, width: float) -> P
 	var back: Vector2 = (points[points.size() - 3] - tip).normalized()
 	var side: Vector2 = Vector2(-back.y, back.x)
 	var size: float = 7.0 * zoom
-	draw_colored_polygon(PackedVector2Array([tip, tip + back * size + side * size * 0.55, tip + back * size - side * size * 0.55]), colour)
+	var arrow: PackedVector2Array = PackedVector2Array([tip, tip + back * size + side * size * 0.55, tip + back * size - side * size * 0.55])
+	draw_colored_polygon(arrow, colour)
+	arrow.append(tip)
+	draw_polyline(arrow, colour, 1.0, true)  # a smooth edge without the window's MSAA
 	return points
 
 
@@ -1807,17 +1951,25 @@ func _make_problem_watch() -> void:
 	var watch: Timer = Timer.new()
 	watch.wait_time = 1.0
 	watch.autostart = true
-	watch.timeout.connect(_mark_problems)
+	watch.timeout.connect(_mark_problems.bind(false))
 	add_child(watch, false, Node.INTERNAL_MODE_BACK)
 
 
-func _mark_problems() -> void:
+var _marks_hash: int = 0
+
+
+## [param force]: the cards were built anew. The once-a-second look walks the cards only when
+## the list itself changed (russian-monologue).
+func _mark_problems(force: bool = true) -> void:
 	if ProjectManager.current_project == null or not is_inside_tree():
 		return
 	var found: Dictionary = ProblemMarks.gather()
 	_problems = found["list"]
+	var list_hash: int = hash([_problems, storyline_id])
+	var walk: bool = force or list_hash != _marks_hash
+	_marks_hash = list_hash
 	var storyline: StorylineDocument = get_storyline()
-	if storyline:
+	if storyline and walk:
 		for node: InspectableNode in storyline.nodes:
 			if is_instance_valid(node.graph_view):
 				ProblemMarks.apply(node.graph_view, node.get_id(), _problems)

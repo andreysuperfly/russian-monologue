@@ -534,5 +534,9 @@ func _process(_delta: float) -> void:
 	if is_equal_approx(zoom, _wire_zoom):
 		return
 	_wire_zoom = zoom
-	connection_lines_thickness = maxf(1.0, _wire_thickness * minf(zoom, 1.0))
+	# in half-pixel steps (russian-monologue): a new thickness rebuilds every wire, and the
+	# wheel moves the zoom a little at a time
+	var thickness: float = maxf(1.0, snappedf(_wire_thickness * minf(zoom, 1.0), 0.5))
+	if not is_equal_approx(thickness, connection_lines_thickness):
+		connection_lines_thickness = thickness
 	queue_redraw()  # dashed back wires are drawn by hand and follow the zoom
