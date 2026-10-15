@@ -540,7 +540,14 @@ func _reconnect_all_slots_now() -> void:
 				# a button on the card to go there, and — unless switched off — a dashed arc showing it
 				_add_jump_link(from_node, from_property, to_node)
 				if ConfigManager.get_config("back_links_as_buttons", false) != true:
-					_back_wires.append([from_node.graph_view, from_port, to_node.graph_view, to_port])
+					# which wire of the model it is, found once here, not on every redraw
+					var model_wire: NodeConnection = null
+					for w: NodeConnection in storyline.connections:
+						if w.from_node_id == from_node_id and w.to_node_id == to_node_id \
+								and w.get_from_name() == from_property and w.get_to_name() == to_property:
+							model_wire = w
+							break
+					_back_wires.append([from_node.graph_view, from_port, to_node.graph_view, to_port, model_wire])
 			else:
 				connect_node(from_view_name, from_port, to_view_name, to_port)
 				mark_lanes_dirty()
@@ -1605,12 +1612,45 @@ func _draw() -> void:
 		var lit: bool = from_view.selected or to_view.selected
 		var colour: Color = ThemeLayout.accent_color.lightened(0.25) if lit else Color(1, 1, 1, 0.22)
 		_arcs.append([_dashed_arc(start, end, colour, (2.0 if lit else 1.2) * zoom), from_view, to_view,
-			wire_between(String(from_view.name), wire[1], String(to_view.name), wire[3])])
+			wire[4] if wire.size() > 4 else null])
 
 
 ## An S-shaped arc out of the right of one card and into the left of another, dashed, with
 ## an arrowhead at the card it leads to.
+var _arc_cache: Dictionary = {}
+
+
 func _dashed_arc(start: Vector2, end: Vector2, colour: Color, width: float) -> PackedVector2Array:
+	# the shape only depends on where the end is from the start, the zoom and the look: a pan
+	# moves the arc whole, so it is worked out once and only shifted (russian-monologue)
+	var span: Vector2 = end - start
+	var key: String = "%.1f,%.1f|%.4f|%s|%.2f" % [span.x, span.y, zoom, colour.to_html(), width]
+	var shape: Variant = _arc_cache.get(key)
+	if shape == null:
+		if _arc_cache.size() > 400:
+			_arc_cache.clear()
+		shape = _arc_shape(span)
+		_arc_cache[key] = shape
+	var dashes: PackedVector2Array = shape[0]
+	var arrow: PackedVector2Array = shape[1]
+	draw_set_transform(start)
+	if not dashes.is_empty():
+		draw_multiline(dashes, colour, width, true)  # one draw for the whole arc, not one per dash
+	draw_colored_polygon(arrow, colour)
+	var edge: PackedVector2Array = arrow.duplicate()
+	edge.append(arrow[0])
+	draw_polyline(edge, colour, 1.0, true)  # a smooth edge without the window's MSAA
+	draw_set_transform(Vector2.ZERO)
+	var points: PackedVector2Array = (shape[2] as PackedVector2Array).duplicate()
+	for i: int in points.size():
+		points[i] += start
+	return points
+
+
+## An S-shaped arc from (0, 0) to [param end], dashed, with an arrowhead at the end:
+## [dashes as segment pairs, arrow, the curve's points].
+func _arc_shape(end: Vector2) -> Array:
+	var start: Vector2 = Vector2.ZERO
 	var reach: float = maxf(80.0 * zoom, absf(start.y - end.y) * 0.25)
 	var c1: Vector2 = start + Vector2(reach, 0)
 	var c2: Vector2 = end - Vector2(reach, 0)
@@ -1625,6 +1665,7 @@ func _dashed_arc(start: Vector2, end: Vector2, colour: Color, width: float) -> P
 	var gap: float = 5.0 * zoom
 	var drawing: bool = true
 	var left: float = dash
+	var dashes: PackedVector2Array = PackedVector2Array()
 	for i: int in points.size() - 1:
 		var a: Vector2 = points[i]
 		var b: Vector2 = points[i + 1]
@@ -1632,10 +1673,9 @@ func _dashed_arc(start: Vector2, end: Vector2, colour: Color, width: float) -> P
 		var done: float = 0.0
 		while done < length:
 			var step: float = minf(left, length - done)
-			var p: Vector2 = a.lerp(b, done / length)
-			var q: Vector2 = a.lerp(b, (done + step) / length)
 			if drawing:
-				draw_line(p, q, colour, width, true)
+				dashes.append(a.lerp(b, done / length))
+				dashes.append(a.lerp(b, (done + step) / length))
 			done += step
 			left -= step
 			if left <= 0.0:
@@ -1647,10 +1687,7 @@ func _dashed_arc(start: Vector2, end: Vector2, colour: Color, width: float) -> P
 	var side: Vector2 = Vector2(-back.y, back.x)
 	var size: float = 7.0 * zoom
 	var arrow: PackedVector2Array = PackedVector2Array([tip, tip + back * size + side * size * 0.55, tip + back * size - side * size * 0.55])
-	draw_colored_polygon(arrow, colour)
-	arrow.append(tip)
-	draw_polyline(arrow, colour, 1.0, true)  # a smooth edge without the window's MSAA
-	return points
+	return [dashes, arrow, points]
 
 
 ## The arc under the pointer, as [points, from_view, to_view, where along it 0..1], or [].

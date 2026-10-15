@@ -56,8 +56,13 @@ func _ready() -> void:
 	disconnection_request.connect(func(_f, _fp, _t, _tp): mark_lanes_dirty())
 	connection_to_empty.connect(func(_f, _fp, _p): mark_lanes_dirty())
 	connection_from_empty.connect(func(_t, _tp, _p): mark_lanes_dirty())
-	begin_node_move.connect(func(): mark_lanes_dirty())
-	end_node_move.connect(func(): mark_lanes_dirty())
+	# while a card is dragged the lanes stay as they were and its own wires go the plain way;
+	# the whole layout is done once, when it is let go (russian-monologue)
+	begin_node_move.connect(func() -> void: _dragging_cards = true)
+	end_node_move.connect(func() -> void:
+		_dragging_cards = false
+		_lanes_dirty = false  # so the mark below is not swallowed
+		mark_lanes_dirty())
 
 
 func mark_lanes_dirty() -> void:
@@ -70,16 +75,18 @@ func _track_node_child(child: Node) -> void:
 	if child is GraphNode:
 		if not child.position_offset_changed.is_connected(mark_lanes_dirty):
 			child.position_offset_changed.connect(mark_lanes_dirty)
-		if not child.item_rect_changed.is_connected(mark_lanes_dirty):
-			child.item_rect_changed.connect(mark_lanes_dirty)
+		# the size only: a card's screen rect moves on every scroll and zoom, and lanes are laid
+		# out in graph space, so that redid the whole layout on each frame of a pan (russian-monologue)
+		if not child.resized.is_connected(mark_lanes_dirty):
+			child.resized.connect(mark_lanes_dirty)
 
 
 func _untrack_node_child(child: Node) -> void:
 	if child is GraphNode:
 		if child.position_offset_changed.is_connected(mark_lanes_dirty):
 			child.position_offset_changed.disconnect(mark_lanes_dirty)
-		if child.item_rect_changed.is_connected(mark_lanes_dirty):
-			child.item_rect_changed.disconnect(mark_lanes_dirty)
+		if child.resized.is_connected(mark_lanes_dirty):
+			child.resized.disconnect(mark_lanes_dirty)
 
 
 func _on_child_entered_tree(child: Node) -> void:
@@ -238,6 +245,7 @@ func _get_connection_line(from_position: Vector2, to_position: Vector2) -> Packe
 
 
 var _lanes_dirty: bool = true
+var _dragging_cards: bool = false
 var _lane_turns: Dictionary = {}  # key String -> float turn_x in canvas px
 var _lane_list: Array[Dictionary] = []  # list of { "p1": Vector2, "p2": Vector2, "turn_x": float }
 var _detour_routes: Dictionary = {}  # key String -> Array[Vector2] (canvas coords)
@@ -248,7 +256,7 @@ func _get_wire_mid_x(from_position: Vector2, to_position: Vector2) -> float:
 	var base_mid: float = (from_position.x + to_position.x) * 0.5
 	if not separate_wire_lanes:
 		return base_mid
-	if _lanes_dirty:
+	if _lanes_dirty and not _dragging_cards:
 		_update_lane_offsets()
 	var c_from: Vector2 = from_position / zoom
 	var c_to: Vector2 = to_position / zoom
@@ -256,6 +264,8 @@ func _get_wire_mid_x(from_position: Vector2, to_position: Vector2) -> float:
 	var turn: Variant = _lane_turns.get(key)
 	if turn != null:
 		return float(turn) * zoom
+	if _dragging_cards:
+		return base_mid
 	# fallback: match by close canvas coordinates (within 4px)
 	for rec: Dictionary in _lane_list:
 		if rec.p1.distance_squared_to(c_from) <= 16.0 and rec.p2.distance_squared_to(c_to) <= 16.0:
@@ -266,7 +276,7 @@ func _get_wire_mid_x(from_position: Vector2, to_position: Vector2) -> float:
 func _get_detour_points(from_position: Vector2, to_position: Vector2) -> Array[Vector2]:
 	if not avoid_card_obstacles:
 		return []
-	if _lanes_dirty:
+	if _lanes_dirty and not _dragging_cards:
 		_update_lane_offsets()
 	if _detour_routes.is_empty() and _detour_list.is_empty():
 		return []
@@ -280,6 +290,8 @@ func _get_detour_points(from_position: Vector2, to_position: Vector2) -> Array[V
 		for pt: Vector2 in (pts_var as Array):
 			res.append(pt * zoom)
 		return res
+	if _dragging_cards:
+		return []
 
 	# fallback: match by close canvas coordinates (within 4px)
 	for rec: Dictionary in _detour_list:
